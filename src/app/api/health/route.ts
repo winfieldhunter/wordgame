@@ -14,10 +14,15 @@ export async function GET() {
   const cacheSourceUsed =
     source === ".cache" || source === "data/puzzle-cache" ? "local" : source;
 
+  const puzzleCacheBaseUrlSet =
+    typeof process.env.PUZZLE_CACHE_BASE_URL === "string" &&
+    process.env.PUZZLE_CACHE_BASE_URL.length > 0;
+
   return NextResponse.json({
     todayPuzzleId,
     cacheSourceUsed,
     percentileAvailable,
     cacheSize,
+    puzzleCacheBaseUrlSet,
   });
 }
