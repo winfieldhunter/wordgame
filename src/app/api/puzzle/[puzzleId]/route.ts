@@ -20,6 +20,12 @@ export async function GET(
 
   const config = defaultGameConfig;
   const hints = [...puzzle.hints];
+  const firstWord = puzzle.target.trim().split(/\s+/)[0] ?? "";
+  const firstLetter = firstWord[0]?.toUpperCase() ?? "";
+  const wordLength = firstWord.length;
+  if (hints.length >= 3 && wordLength > 0) {
+    hints[2] = `Starts with "${firstLetter}", ${wordLength} letter${wordLength === 1 ? "" : "s"}.`;
+  }
   let letterHelp: { firstLetter: string; wordLength: number } | undefined;
 
   if (sessionId) {

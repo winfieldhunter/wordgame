@@ -36,6 +36,7 @@ export default function Home() {
   const [difficulty, setDifficulty] = useState<"normal" | "hard">("normal");
   const [level, setLevel] = useState<"easy" | "medium" | "hard">("easy");
   const [completedLevels, setCompletedLevels] = useState<("easy" | "medium" | "hard")[]>([]);
+  const [todayPuzzleIds, setTodayPuzzleIds] = useState<{ easy: string; medium: string; hard: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
@@ -74,6 +75,7 @@ export default function Home() {
         setDifficulty(data.difficulty === "hard" ? "hard" : "normal");
         setLevel(data.level ?? "easy");
         setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
+        if (data.todayPuzzleIds && typeof data.todayPuzzleIds === "object") setTodayPuzzleIds(data.todayPuzzleIds);
         if (data.runEnded) {
           setRunEnded(true);
           if (data.isWin !== undefined) setIsWin(data.isWin);
@@ -104,6 +106,7 @@ export default function Home() {
         setDifficulty(data.difficulty === "hard" ? "hard" : "normal");
         setLevel(data.level ?? "easy");
         setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
+        if (data.todayPuzzleIds && typeof data.todayPuzzleIds === "object") setTodayPuzzleIds(data.todayPuzzleIds);
         if (data.runEnded) {
           setRunEnded(true);
           if (data.isWin !== undefined) setIsWin(data.isWin);
@@ -153,11 +156,36 @@ export default function Home() {
     else fetchPuzzleAgain();
     if (result.revealedTarget) setRevealedTarget(result.revealedTarget);
     if (result.percentileUnavailable) setPercentileUnavailable(true);
-    if (result.runEnded) fetchToday();
+    // Don't auto-advance when run ends — user stays on this level to see the revealed word; they click "Continue" to go to next.
   };
 
   const gameEnded = runEnded;
   const showScoring = guesses.length > 0;
+
+  const advanceToNextLevel = () => {
+    if (!todayPuzzleIds || !sessionId) return;
+    const next: { level: "medium" | "hard"; id: string } | null =
+      level === "easy" ? { level: "medium", id: todayPuzzleIds.medium } :
+      level === "medium" ? { level: "hard", id: todayPuzzleIds.hard } : null;
+    if (!next) return;
+    setPuzzleId(next.id);
+    setLevel(next.level);
+    setRunEnded(false);
+    setGuesses([]);
+    setRevealedTarget(null);
+    setIsWin(null);
+    setIsLoss(false);
+    setHints([]);
+    setLetterHelp(null);
+    fetch(`/api/puzzle/${next.id}?sessionId=${sessionId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setHints(data.hints ?? []);
+        setLetterHelp(data.letterHelp ?? null);
+        setMaxGuesses(data.config?.maxGuesses ?? 8);
+      })
+      .catch(() => {});
+  };
 
   if (loading) {
     return (
@@ -300,6 +328,19 @@ export default function Home() {
             scoringMode={percentileUnavailable ? "cosine_only" : "full"}
           />
         </>
+      )}
+
+      {gameEnded && todayPuzzleIds && level !== "hard" && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={advanceToNextLevel}
+            style={{ padding: "var(--space-3) var(--space-5)", fontSize: "var(--text-base)", fontWeight: 600 }}
+          >
+            Continue to {level === "easy" ? "Medium" : "Hard"}
+          </button>
+        </div>
       )}
 
       {gameEnded && (
