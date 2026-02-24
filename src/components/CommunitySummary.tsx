@@ -33,7 +33,7 @@ export function CommunitySummary({
   useEffect(() => {
     fetch(`/api/community/${puzzleId}?sessionId=${sessionId}`)
       .then((r) => {
-        if (r.status === 403) throw new Error("Complete the puzzle first.");
+        if (r.status === 403) throw new Error("Complete the puzzle first. If you just finished, add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your Vercel project so your run is saved.");
         if (!r.ok) throw new Error("Could not load community data.");
         return r.json();
       })

@@ -45,7 +45,7 @@ export function SemanticMap({ sessionId, puzzleId, isWin }: SemanticMapProps) {
   useEffect(() => {
     fetch(`/api/map/${puzzleId}?sessionId=${sessionId}`)
       .then(async (r) => {
-        if (r.status === 403) throw new Error("Complete the puzzle first.");
+        if (r.status === 403) throw new Error("Complete the puzzle first. If you just finished, add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your Vercel project so your run is saved.");
         if (!r.ok) {
           const data = await r.json().catch(() => ({}));
           throw new Error(getFriendlyErrorMessage(data.code, data.error ?? "Could not load map."));

@@ -30,6 +30,7 @@ export function GameScreen({
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [newHintIndex, setNewHintIndex] = useState<number | null>(null);
+  const [scratchWord, setScratchWord] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const prevHintsLengthRef = useRef(hints.length);
 
@@ -176,6 +177,55 @@ export function GameScreen({
           </>
         )}
       </div>
+
+      {letterHelp && !gameEnded && (
+        <div
+          className="card"
+          style={{
+            padding: "var(--space-3) var(--space-4)",
+            marginBottom: "var(--space-4)",
+            background: "var(--border-light)",
+            border: "1px dashed var(--border)",
+          }}
+        >
+          <p style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text)" }}>
+            Scratch paper
+          </p>
+          <p style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
+            Try words here — doesn’t use a guess.
+          </p>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              value={scratchWord}
+              onChange={(e) => {
+                const raw = e.target.value.toLowerCase().slice(0, letterHelp.wordLength);
+                const fixed = (letterHelp.firstLetter + raw.slice(1)).slice(0, letterHelp.wordLength);
+                setScratchWord(fixed);
+              }}
+              placeholder={`${letterHelp.firstLetter}${"_".repeat(letterHelp.wordLength - 1)}`}
+              maxLength={letterHelp.wordLength}
+              autoComplete="off"
+              style={{
+                flex: "1 1 140px",
+                minWidth: 0,
+                fontSize: "var(--text-base)",
+                padding: "var(--space-2) var(--space-3)",
+                fontFamily: "var(--font-mono, monospace)",
+              }}
+              aria-label="Scratch paper: try a word"
+            />
+            <button
+              type="button"
+              onClick={() => setScratchWord("")}
+              className="btn-secondary"
+              style={{ padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-sm)" }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {revealedTarget && (
         <p

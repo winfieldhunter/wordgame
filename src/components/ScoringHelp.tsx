@@ -19,10 +19,10 @@ export function ScoringHelp() {
       </summary>
       <div style={{ marginTop: "var(--space-2)", lineHeight: 1.5 }}>
         <p style={{ margin: "0 0 var(--space-2)" }}>
-          <strong>% (percentile) is your main score.</strong> Your guess is compared to 50,000 words. The percentage means “closer to the secret word than this many of them.” So 94% = your guess is closer than about 94% of the list. Only the exact word scores 100%.
+          <strong>Higher % = closer in meaning</strong> to the secret word. We compare your guess to a big list of words; your % is how many of them you beat. 100% = you got the exact word.
         </p>
-        <p style={{ margin: 0 }}>
-          For more detail on a guess, expand <strong>Details</strong> under that guess to see its cosine similarity (0–1).
+        <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-subtle)" }}>
+          Expand <strong>Details</strong> under a guess for the technical score (0–1).
         </p>
       </div>
     </details>

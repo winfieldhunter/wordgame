@@ -140,6 +140,7 @@ To persist everyone’s guesses and power the community stats and 2D map with re
      SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
      ```
    - If both are set, the app uses Supabase for runs and aggregates; otherwise it falls back to in-memory (no persistence across restarts).
+   - **Vercel:** Add the same two variables in Project → Settings → Environment Variables (Production). Without them, each serverless request uses in-memory storage, so your completed run is not visible to Map / Community / Leaderboard and you’ll see “Complete the puzzle first” or “No one has completed” after finishing.
 
 4. **Deploy and share**
    - Deploy to HTTPS (e.g. Vercel, Netlify). Share the deployed URL with friends; they can open it on their phone and add it to the home screen (PWA). All guesses are stored in Supabase and feed into the community summary and 2D semantic map. A **new puzzle is used every day at midnight UTC** (see `getTodayPuzzleId()` in `src/server/puzzles/catalog.ts` to change timezone).

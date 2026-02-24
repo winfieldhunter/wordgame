@@ -110,7 +110,11 @@ export function PostGameTabs({
 
       {tab === "map" && (
         <div style={{ marginBottom: "var(--space-2)" }}>
-          <SemanticMap sessionId={sessionId} puzzleId={puzzleId} isWin={isWin} />
+          {completed ? (
+            <SemanticMap sessionId={sessionId} puzzleId={puzzleId} isWin={isWin} />
+          ) : (
+            <p style={{ fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>Saving your result…</p>
+          )}
         </div>
       )}
 
@@ -139,22 +143,30 @@ export function PostGameTabs({
         </details>
       )}
 
-      {tab === "leaderboard" && <Leaderboard sessionId={sessionId} puzzleId={puzzleId} />}
+      {tab === "leaderboard" && (
+        completed ? <Leaderboard sessionId={sessionId} puzzleId={puzzleId} /> : <p style={{ fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>Saving your result…</p>
+      )}
 
-      {tab === "friends" && <FriendsRanking sessionId={sessionId} puzzleId={puzzleId} />}
+      {tab === "friends" && (
+        completed ? <FriendsRanking sessionId={sessionId} puzzleId={puzzleId} /> : <p style={{ fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>Saving your result…</p>
+      )}
 
       {tab === "community" && (
-        <CommunitySummary
-          sessionId={sessionId}
-          puzzleId={puzzleId}
-          yourBestGuessIndex={
-            guesses.length > 0
-              ? guesses.reduce((best, g) =>
-                  (g.percentile ?? 0) > (best.percentile ?? 0) ? g : best
-                ).guessIndex
-              : 0
-          }
-        />
+        completed ? (
+          <CommunitySummary
+            sessionId={sessionId}
+            puzzleId={puzzleId}
+            yourBestGuessIndex={
+              guesses.length > 0
+                ? guesses.reduce((best, g) =>
+                    (g.percentile ?? 0) > (best.percentile ?? 0) ? g : best
+                  ).guessIndex
+                : 0
+            }
+          />
+        ) : (
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>Saving your result…</p>
+        )
       )}
     </section>
   );
