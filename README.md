@@ -87,7 +87,14 @@ A Wordle-like semantic distance game: you get a short, human-written hint and tr
   `RUN_PRECOMPUTE=1 npm run build`
 
 - **Automated daily cache (GitHub Action)**  
-  `.github/workflows/daily-puzzle-cache.yml` runs at **00:05 UTC** every day: `npm ci` → `npm run fetch-vocabulary` → `npm run precompute:export -- --today`. Then either **upload to S3/R2** (if `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `S3_BUCKET` are set in repo secrets/vars) or **commit and push** `data/puzzle-cache/daily-YYYY-MM-DD.json`. Set **`OPENAI_API_KEY`** in repo secrets so precompute can run. Puzzle ID uses UTC only (see `src/server/puzzles/puzzleId.ts`).
+  `.github/workflows/daily-puzzle-cache.yml` runs at **00:05 UTC** every day: `npm ci` → `npm run fetch-vocabulary` → `npm run precompute:export -- --today`. Then either **upload to R2/S3** or **commit and push** (see below). Set **`OPENAI_API_KEY`** in repo secrets. Puzzle ID uses UTC only (see `src/server/puzzles/puzzleId.ts`).
+
+- **Cloudflare R2 (Option B)**  
+  In the repo: **Secrets** — `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL` (R2 S3 API endpoint, e.g. `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`). **Variables** — `S3_BUCKET=nearword-cache`, `S3_PREFIX=puzzle-cache`, `AWS_REGION=auto`. When these are set, the workflow uploads to R2 at key `puzzle-cache/daily-YYYY-MM-DD.json`; otherwise it commits and pushes. In **Vercel** (Production) set:
+  ```bash
+  PUZZLE_CACHE_BASE_URL=https://pub-b8b83d145fa34d339c1fea39c5391cd.r2.dev/puzzle-cache
+  ```
+  (No trailing slash; R2 public dev URL serves object keys directly under this path.) After redeploy and running the Daily puzzle cache workflow, **GET /api/health** should show `cacheSourceUsed: "blob"` and `percentileAvailable: true`. Verify the blob directly: `https://pub-b8b83d145fa34d339c1fea39c5391cd.r2.dev/puzzle-cache/daily-YYYY-MM-DD.json` (today UTC) should return JSON.
 
 - **Health check**  
   **GET /api/health** returns `{ todayPuzzleId, cacheSourceUsed: "memory"|"local"|"blob"|"none", percentileAvailable }` so you can verify production at a glance.

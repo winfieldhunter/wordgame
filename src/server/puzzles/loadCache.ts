@@ -98,6 +98,7 @@ async function tryFetchFromBlob(puzzleId: string): Promise<PuzzleCache | null> {
   if (negativeType === "not_found") throw new PuzzleCacheNotFoundError("Puzzle cache not found");
   if (negativeType === "unavailable") throw new PuzzleCacheUnavailableError("Puzzle cache temporarily unavailable");
 
+  // Exact URL app fetches; must match R2 object path: {PUZZLE_CACHE_BASE_URL}/{puzzleId}.json (e.g. .../puzzle-cache/daily-YYYY-MM-DD.json)
   const url = base.replace(/\/$/, "") + "/" + encodeURIComponent(puzzleId) + ".json";
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -105,6 +106,8 @@ async function tryFetchFromBlob(puzzleId: string): Promise<PuzzleCache | null> {
   try {
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
+    // Temporary debug: verify R2 public URL and response (remove after pipeline verification)
+    console.log(`[loadPuzzleCache] blob fetch debug url=${url} status=${res.status}`);
     if (res.status === 404) {
       addToNegativeCache(puzzleId, "not_found");
       throw new PuzzleCacheNotFoundError("Puzzle cache not found");
@@ -113,8 +116,16 @@ async function tryFetchFromBlob(puzzleId: string): Promise<PuzzleCache | null> {
       addToNegativeCache(puzzleId, "unavailable");
       throw new PuzzleCacheUnavailableError(`Puzzle cache fetch failed: ${res.status}`);
     }
-    const data = (await res.json()) as { sortedBySimilarity?: unknown; targetEmbedding?: unknown };
+    let data: { sortedBySimilarity?: unknown; targetEmbedding?: unknown };
+    try {
+      data = (await res.json()) as { sortedBySimilarity?: unknown; targetEmbedding?: unknown };
+    } catch (parseErr) {
+      console.log(`[loadPuzzleCache] blob fetch debug url=${url} status=${res.status} jsonParseOk=false`);
+      addToNegativeCache(puzzleId, "unavailable");
+      throw new PuzzleCacheUnavailableError("Puzzle cache invalid response");
+    }
     const parsed = parseCacheData(data);
+    console.log(`[loadPuzzleCache] blob fetch debug url=${url} status=${res.status} jsonParseOk=${parsed != null}`);
     if (!parsed) {
       addToNegativeCache(puzzleId, "unavailable");
       throw new PuzzleCacheUnavailableError("Puzzle cache invalid response");
@@ -181,7 +192,7 @@ export async function loadPuzzleCache(
       ? `${baseUrl.replace(/\/$/, "")}/${encodeURIComponent(puzzleId)}.json`
       : "(PUZZLE_CACHE_BASE_URL not set)";
   console.log(
-    `[${LOG_SOURCE}] puzzleId=${puzzleId} source=none. PUZZLE_CACHE_BASE_URL=${baseUrl ? "set" : "unset"}. Attempted blob URL: ${attemptedBlobUrl}. Local paths tried: .cache/puzzles, data/puzzle-cache.`
+    `[${LOG_SOURCE}] [debug] source=none puzzleId=${puzzleId} attemptedBlobUrl=${attemptedBlobUrl} PUZZLE_CACHE_BASE_URL=${baseUrl ? "set" : "unset"}`
   );
   return { cache: null, source: "none" };
 }
