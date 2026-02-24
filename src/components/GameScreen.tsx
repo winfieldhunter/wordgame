@@ -30,7 +30,7 @@ export function GameScreen({
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [newHintIndex, setNewHintIndex] = useState<number | null>(null);
-  const [scratchWord, setScratchWord] = useState("");
+  const [scratchRest, setScratchRest] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const scratchInputRef = useRef<HTMLInputElement>(null);
   const prevHintsLengthRef = useRef(hints.length);
@@ -234,22 +234,16 @@ export function GameScreen({
                 >
                   {i === 0
                     ? letterHelp.firstLetter
-                    : scratchWord.length > i
-                      ? scratchWord[i]
-                      : ""}
+                    : scratchRest[i - 1] ?? ""}
                 </span>
               ))}
             </div>
             <input
               ref={scratchInputRef}
               type="text"
-              value={scratchWord}
-              onChange={(e) => {
-                const raw = e.target.value.toLowerCase().slice(0, letterHelp.wordLength);
-                const fixed = (letterHelp.firstLetter + raw.slice(1)).slice(0, letterHelp.wordLength);
-                setScratchWord(fixed);
-              }}
-              maxLength={letterHelp.wordLength}
+              value={scratchRest}
+              onChange={(e) => setScratchRest(e.target.value.toLowerCase().slice(0, letterHelp.wordLength - 1))}
+              maxLength={letterHelp.wordLength - 1}
               autoComplete="off"
               style={{
                 position: "absolute",
@@ -265,12 +259,12 @@ export function GameScreen({
             />
           </div>
           <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
-            {letterHelp.wordLength - scratchWord.length} letters left
+            {letterHelp.wordLength - 1 - scratchRest.length} letters left
           </p>
           <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
             <button
               type="button"
-              onClick={() => setScratchWord("")}
+              onClick={() => setScratchRest("")}
               className="btn-secondary"
               style={{ padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-sm)" }}
             >

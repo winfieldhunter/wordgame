@@ -63,7 +63,7 @@ A Wordle-like semantic distance game: you get a short, human-written hint and tr
 
 **Precompute (embeddings + puzzle caches) is not run during Vercel build.** Build runs `next build` only. **In production, today's puzzle cache must be available** or the guess API returns `503 CACHE_UNAVAILABLE` and users see a friendly "cache temporarily unavailable" message instead of percentile. Use either committed cache or blob storage.
 
-**Today's puzzle ID** is `daily-YYYY-MM-DD` (UTC). The cache file must be named **`<puzzleId>.json`** (e.g. `daily-2026-02-22.json`) in `data/puzzle-cache/` or at `{PUZZLE_CACHE_BASE_URL}/{puzzleId}.json`.
+**Today's puzzle ID** is `daily-YYYY-MM-DD` (date is in `PUZZLE_TIMEZONE`, default midnight Eastern). **One-time shift:** To show “tomorrow’s” puzzle for today (e.g. so everyone gets a fresh puzzle after already playing), set `PUZZLE_DATE_OFFSET_DAYS=1` and `PUZZLE_OFFSET_APPLY_UNTIL=YYYY-MM-DD` (that calendar day only) in Vercel and in GitHub repo Variables; remove or clear them after that date so the next day is normal. The cache file must be named **`<puzzleId>.json`** (e.g. `daily-2026-02-22.json`) in `data/puzzle-cache/` or at `{PUZZLE_CACHE_BASE_URL}/{puzzleId}.json`.
 
 - **Option A — Committed cache (dev / small deploys)**  
   Run precompute locally and export puzzle JSONs into the repo so the app can read them at runtime:
@@ -87,14 +87,14 @@ A Wordle-like semantic distance game: you get a short, human-written hint and tr
   `RUN_PRECOMPUTE=1 npm run build`
 
 - **Automated daily cache (GitHub Action)**  
-  `.github/workflows/daily-puzzle-cache.yml` runs at **00:05 UTC** every day: `npm ci` → `npm run fetch-vocabulary` → restore embeddings cache → `npm run precompute:export -- --today`. Then either **upload to R2/S3** or **commit and push** (see below). Set **`OPENAI_API_KEY`** in repo secrets. Puzzle ID uses UTC only (see `src/server/puzzles/puzzleId.ts`). The workflow caches `.cache/embeddings.jsonl` between runs (keyed by vocabulary) so only new words are embedded after the first run.
+  `.github/workflows/daily-puzzle-cache.yml` runs at **00:05 Eastern (05:05 UTC)** every day: `npm ci` → `npm run fetch-vocabulary` → restore embeddings cache → `npm run precompute:export -- --today`. Then either **upload to R2/S3** or **commit and push** (see below). Set **`OPENAI_API_KEY`** in repo secrets. The puzzle day flips at midnight in `PUZZLE_TIMEZONE` (default America/New_York). The workflow caches `.cache/embeddings.jsonl` between runs (keyed by vocabulary) so only new words are embedded after the first run.
 
 - **Cloudflare R2 (Option B)**  
   In the repo: **Secrets** — `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL` (R2 S3 API endpoint, e.g. `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`). **Variables** — `UPLOAD_TO_R2=true` (enables R2 upload; GitHub doesn't allow checking secrets in `if:`), and optionally `S3_BUCKET=nearword-cache`, `S3_PREFIX=puzzle-cache`, `AWS_REGION=auto`. When `UPLOAD_TO_R2` is true, the workflow uploads to R2 at key `puzzle-cache/daily-YYYY-MM-DD.json`; otherwise it commits and pushes. In **Vercel** (Production) set:
   ```bash
   PUZZLE_CACHE_BASE_URL=https://pub-b8b83d145fa34d339c1fea39c5391cd.r2.dev/puzzle-cache
   ```
-  (No trailing slash; R2 public dev URL serves object keys directly under this path.) After redeploy and running the Daily puzzle cache workflow, **GET /api/health** should show `cacheSourceUsed: "blob"` and `percentileAvailable: true`. Verify the blob directly: `https://pub-b8b83d145fa34d339c1fea39c5391cd.r2.dev/puzzle-cache/daily-YYYY-MM-DD.json` (today UTC) should return JSON.
+  (No trailing slash; R2 public dev URL serves object keys directly under this path.) After redeploy and running the Daily puzzle cache workflow, **GET /api/health** should show `cacheSourceUsed: "blob"` and `percentileAvailable: true`. Verify the blob directly: `https://pub-b8b83d145fa34d339c1fea39c5391cd.r2.dev/puzzle-cache/daily-YYYY-MM-DD.json` (today’s date in your puzzle timezone) should return JSON.
 
 - **Health check**  
   **GET /api/health** returns `{ todayPuzzleId, cacheSourceUsed: "memory"|"local"|"blob"|"none", percentileAvailable }` so you can verify production at a glance.
@@ -143,7 +143,7 @@ To persist everyone’s guesses and power the community stats and 2D map with re
    - **Vercel:** Add the same two variables in Project → Settings → Environment Variables (Production). Without them, each serverless request uses in-memory storage, so your completed run is not visible to Map / Community / Leaderboard and you’ll see “Complete the puzzle first” or “No one has completed” after finishing.
 
 4. **Deploy and share**
-   - Deploy to HTTPS (e.g. Vercel, Netlify). Share the deployed URL with friends; they can open it on their phone and add it to the home screen (PWA). All guesses are stored in Supabase and feed into the community summary and 2D semantic map. A **new puzzle is used every day at midnight UTC** (see `getTodayPuzzleId()` in `src/server/puzzles/catalog.ts` to change timezone).
+   - Deploy to HTTPS (e.g. Vercel, Netlify). Share the deployed URL with friends; they can open it on their phone and add it to the home screen (PWA). All guesses are stored in Supabase and feed into the community summary and 2D semantic map. A **new puzzle is used every day at midnight Eastern** (set `PUZZLE_TIMEZONE` env to override, e.g. `America/Los_Angeles`).
 
 ## Swapping embeddings or stores
 

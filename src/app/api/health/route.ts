@@ -18,11 +18,15 @@ export async function GET() {
     typeof process.env.PUZZLE_CACHE_BASE_URL === "string" &&
     process.env.PUZZLE_CACHE_BASE_URL.length > 0;
 
+  const puzzleOffsetDays = parseInt(process.env.PUZZLE_DATE_OFFSET_DAYS ?? "0", 10) || 0;
+  const puzzleOffsetUntil = process.env.PUZZLE_OFFSET_APPLY_UNTIL ?? null;
+
   return NextResponse.json({
     todayPuzzleId,
     cacheSourceUsed,
     percentileAvailable,
     cacheSize,
     puzzleCacheBaseUrlSet,
+    puzzleOffset: puzzleOffsetDays || puzzleOffsetUntil ? { days: puzzleOffsetDays, until: puzzleOffsetUntil } : null,
   });
 }

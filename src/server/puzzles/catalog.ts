@@ -63,7 +63,6 @@ function getDevPuzzle(): PuzzleDef {
 }
 
 /**
- * Today’s puzzle ID. A new puzzle is used each calendar day at midnight UTC.
- * To use a different timezone, replace the Date with one in that zone (e.g. via env PUZZLE_DAY_TIMEZONE).
+ * Today’s puzzle ID. A new puzzle is used each calendar day at midnight in PUZZLE_TIMEZONE (default America/New_York).
  */
 export { getTodayPuzzleId } from "./puzzleId";
