@@ -111,7 +111,12 @@ export function PostGameTabs({
       {tab === "map" && (
         <div style={{ marginBottom: "var(--space-2)" }}>
           {completed ? (
-            <SemanticMap sessionId={sessionId} puzzleId={puzzleId} isWin={isWin} />
+            <SemanticMap
+              sessionId={sessionId}
+              puzzleId={puzzleId}
+              isWin={isWin}
+              clientGuesses={guesses.map((g) => g.normalizedGuess)}
+            />
           ) : (
             <p style={{ fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>Saving your result…</p>
           )}

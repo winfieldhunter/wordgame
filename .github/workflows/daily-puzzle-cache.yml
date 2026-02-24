@@ -1,17 +1,14 @@
-# Daily puzzle cache: precompute today's percentile cache and either upload to R2/S3 or commit+push.
-# Runs at 00:05 Eastern (05:05 UTC) so the new day's puzzle is ready after midnight Eastern.
-# Set OPENAI_API_KEY. For R2: set variable UPLOAD_TO_R2=true and secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL; vars S3_BUCKET, S3_PREFIX, AWS_REGION.
+# Daily puzzle cache: precompute today's and tomorrow's percentile caches (easy, medium, hard each) and upload to R2 or commit+push.
+# Runs at 00:05 Eastern (05:05 UTC). Set OPENAI_API_KEY. For R2: UPLOAD_TO_R2=true and secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL.
 name: Daily puzzle cache
 
 on:
   schedule:
-    # 00:05 Eastern (05:05 UTC) every day — after midnight in America/New_York
     - cron: "5 5 * * *"
   workflow_dispatch:
 
 env:
   TZ: America/New_York
-  # One-time shift: set in repo Variables (e.g. PUZZLE_DATE_OFFSET_DAYS=1, PUZZLE_OFFSET_APPLY_UNTIL=2026-02-24) so today shows tomorrow's puzzle; remove or clear after that date.
   PUZZLE_DATE_OFFSET_DAYS: ${{ vars.PUZZLE_DATE_OFFSET_DAYS || '0' }}
   PUZZLE_OFFSET_APPLY_UNTIL: ${{ vars.PUZZLE_OFFSET_APPLY_UNTIL || '' }}
 
@@ -46,36 +43,37 @@ jobs:
           key: embeddings-${{ hashFiles('data/vocabulary.txt') }}
           restore-keys: embeddings-
 
-      - name: Precompute today's puzzle cache
+      - name: Precompute today's puzzle cache (easy, medium, hard)
         run: npm run precompute:export -- --today
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Precompute tomorrow's puzzle cache (so cache exists at midnight)
+      - name: Precompute tomorrow's puzzle cache
         run: |
-          TODAY_ID=$(npx tsx scripts/today-puzzle-id.ts)
-          TODAY_DATE="${TODAY_ID#daily-}"
+          TODAY_EASY=$(npx tsx scripts/today-puzzle-id.ts | head -1)
+          TODAY_DATE="${TODAY_EASY#daily-}"
+          TODAY_DATE="${TODAY_DATE%-easy}"
           TOMORROW_DATE=$(date -d "$TODAY_DATE + 1 day" +%Y-%m-%d)
-          echo "Building tomorrow's cache: daily-$TOMORROW_DATE"
+          echo "Building tomorrow's cache: $TOMORROW_DATE (easy, medium, hard)"
           npx tsx scripts/precompute.ts --from "$TOMORROW_DATE" --to "$TOMORROW_DATE" --output-dir data/puzzle-cache
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: List generated cache artifact
+      - name: List generated cache artifacts
         run: |
           echo "=== data/puzzle-cache/ contents ==="
           ls -lh data/puzzle-cache/ || true
-          TODAY_ID=$(npx tsx scripts/today-puzzle-id.ts)
-          TODAY_DATE="${TODAY_ID#daily-}"
+          TODAY_EASY=$(npx tsx scripts/today-puzzle-id.ts | head -1)
+          TODAY_DATE="${TODAY_EASY#daily-}"
+          TODAY_DATE="${TODAY_DATE%-easy}"
           TOMORROW_DATE=$(date -d "$TODAY_DATE + 1 day" +%Y-%m-%d)
-          TOMORROW_ID="daily-$TOMORROW_DATE"
-          echo "=== Today: $TODAY_ID.json, tomorrow: $TOMORROW_ID.json ==="
-          for f in "$TODAY_ID.json" "$TOMORROW_ID.json"; do
-            [ -f "data/puzzle-cache/$f" ] && echo "OK: $f" || echo "MISSING: $f"
+          for level in easy medium hard; do
+            for d in "$TODAY_DATE" "$TOMORROW_DATE"; do
+              f="data/puzzle-cache/daily-${d}-${level}.json"
+              [ -f "$f" ] && echo "OK: $f" || echo "MISSING: $f"
+            done
           done
 
-      # R2: set repo variable UPLOAD_TO_R2=true and secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL.
-      # We set credentials as env vars (no configure-aws-credentials) so we never call AWS STS; R2 keys are S3-compatible only.
       - name: Upload to Cloudflare R2 (S3 API)
         if: ${{ vars.UPLOAD_TO_R2 == 'true' }}
         env:
@@ -86,47 +84,38 @@ jobs:
           S3_PREFIX: ${{ vars.S3_PREFIX || 'puzzle-cache' }}
           AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
         run: |
-          TODAY_ID=$(npx tsx scripts/today-puzzle-id.ts)
-          TODAY_DATE="${TODAY_ID#daily-}"
-          TOMORROW_DATE=$(date -d "$TODAY_DATE + 1 day" +%Y-%m-%d)
-          TOMORROW_ID="daily-$TOMORROW_DATE"
           if [ -z "$AWS_ENDPOINT_URL" ]; then
-            echo "AWS_ENDPOINT_URL not set (required for R2). Use R2 S3 API endpoint, e.g. https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+            echo "AWS_ENDPOINT_URL not set (required for R2)."
             exit 1
           fi
-          for ID in "$TODAY_ID" "$TOMORROW_ID"; do
-            if [ -f "data/puzzle-cache/$ID.json" ]; then
-              aws s3 cp "data/puzzle-cache/$ID.json" "s3://$S3_BUCKET/$S3_PREFIX/$ID.json" --endpoint-url "$AWS_ENDPOINT_URL"
-              echo "Uploaded $ID.json to R2"
-            else
-              echo "Skip (not built): $ID.json"
-            fi
+          for f in data/puzzle-cache/daily-*.json; do
+            [ -f "$f" ] || continue
+            name=$(basename "$f")
+            aws s3 cp "$f" "s3://$S3_BUCKET/$S3_PREFIX/$name" --endpoint-url "$AWS_ENDPOINT_URL"
+            echo "Uploaded $name to R2"
           done
           echo "App fetches: \${PUZZLE_CACHE_BASE_URL}/<puzzleId>.json"
 
       - name: Commit and push cache (when R2 not configured)
         if: ${{ vars.UPLOAD_TO_R2 != 'true' }}
         run: |
-          TODAY_ID=$(npx tsx scripts/today-puzzle-id.ts)
-          TODAY_DATE="${TODAY_ID#daily-}"
+          TODAY_EASY=$(npx tsx scripts/today-puzzle-id.ts | head -1)
+          TODAY_DATE="${TODAY_EASY#daily-}"
+          TODAY_DATE="${TODAY_DATE%-easy}"
           TOMORROW_DATE=$(date -d "$TODAY_DATE + 1 day" +%Y-%m-%d)
-          TOMORROW_ID="daily-$TOMORROW_DATE"
-          echo "=== Branch (Vercel should deploy this branch) ==="
-          echo "GITHUB_REF=$GITHUB_REF"
-          if [ ! -f "data/puzzle-cache/$TODAY_ID.json" ]; then
-            echo "No file data/puzzle-cache/$TODAY_ID.json"
+          if [ ! -f "data/puzzle-cache/daily-${TODAY_DATE}-easy.json" ]; then
+            echo "No today cache files found."
             exit 1
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "data/puzzle-cache/$TODAY_ID.json"
-          [ -f "data/puzzle-cache/$TOMORROW_ID.json" ] && git add "data/puzzle-cache/$TOMORROW_ID.json"
+          git add data/puzzle-cache/daily-*.json
           echo "=== git status before commit ==="
           git status
           if git diff --staged --quiet; then
             echo "No changes to commit (files already committed)"
           else
-            git commit -m "chore: daily puzzle cache $TODAY_ID + $TOMORROW_ID [skip ci]"
+            git commit -m "chore: daily puzzle cache $TODAY_DATE + $TOMORROW_DATE (easy, medium, hard) [skip ci]"
             git push origin HEAD
             echo "Pushed commit to origin"
           fi

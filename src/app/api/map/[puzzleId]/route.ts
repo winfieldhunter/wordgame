@@ -13,6 +13,8 @@ export async function GET(
 ) {
   const puzzleId = params.puzzleId;
   const sessionId = request.nextUrl.searchParams.get("sessionId") ?? undefined;
+  const clientGuessesRaw = request.nextUrl.searchParams.getAll("clientGuesses");
+  const clientGuesses = clientGuessesRaw.length > 0 ? clientGuessesRaw : undefined;
 
   if (!sessionId) {
     return NextResponse.json(
@@ -48,22 +50,28 @@ export async function GET(
   allVecs.push(targetVec);
   vectors.push({ id: "target", vec: targetVec, kind: "target", label: puzzle?.target });
 
-  for (let i = 0; i < run.guesses.length; i++) {
-    const g = run.guesses[i];
-    const vec = g.embedding;
-    if (vec && vec.length > 0) {
-      allVecs.push(vec);
-      vectors.push({
-        id: `you-${i}`,
-        vec,
-        kind: "your_guess",
-        label: g.normalizedGuess,
-        band: g.band.label,
-        emoji: g.band.emoji,
-        percentile: g.percentile ?? undefined,
-        cosine: g.cosine,
-      });
-    }
+  const yourGuesses =
+    clientGuesses != null && clientGuesses.length > 0
+      ? clientGuesses
+          .map((norm) => run.guesses.find((g) => canonicalForComparison(g.normalizedGuess) === canonicalForComparison(norm)))
+          .filter((g): g is NonNullable<typeof g> => g != null && g.embedding != null && g.embedding.length > 0)
+      : run.guesses.filter((g) => g.embedding != null && g.embedding.length > 0);
+
+  for (let i = 0; i < yourGuesses.length; i++) {
+    const g = yourGuesses[i];
+    const vec = g.embedding!;
+    allVecs.push(vec);
+    const label = clientGuesses != null && clientGuesses.length > 0 ? clientGuesses[i]! : g.normalizedGuess;
+    vectors.push({
+      id: `you-${i}`,
+      vec,
+      kind: "your_guess",
+      label,
+      band: g.band.label,
+      emoji: g.band.emoji,
+      percentile: g.percentile ?? undefined,
+      cosine: g.cosine,
+    });
   }
 
   let crowdBackfillError: string | undefined;

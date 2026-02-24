@@ -34,6 +34,8 @@ export default function Home() {
   const [percentileUnavailable, setPercentileUnavailable] = useState(false);
   const [runEnded, setRunEnded] = useState(false);
   const [difficulty, setDifficulty] = useState<"normal" | "hard">("normal");
+  const [level, setLevel] = useState<"easy" | "medium" | "hard">("easy");
+  const [completedLevels, setCompletedLevels] = useState<("easy" | "medium" | "hard")[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
@@ -63,34 +65,62 @@ export default function Home() {
         return r.json();
       })
       .then((data) => {
-        setPuzzleId(data.puzzleId);
+        setPuzzleId(data.currentPuzzleId ?? data.puzzleId);
         setHints(data.hints ?? []);
         setLetterHelp(data.letterHelp ?? null);
         setMaxGuesses(data.config?.maxGuesses ?? 8);
         setRevealedTarget(data.revealedTarget ?? null);
         setPercentileUnavailable(!!data.percentileUnavailable);
         setDifficulty(data.difficulty === "hard" ? "hard" : "normal");
+        setLevel(data.level ?? "easy");
+        setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
         if (data.runEnded) {
           setRunEnded(true);
           if (data.isWin !== undefined) setIsWin(data.isWin);
           if (data.isLoss !== undefined) setIsLoss(data.isLoss);
           if (Array.isArray(data.guesses) && data.guesses.length > 0) setGuesses(data.guesses);
+        } else {
+          setRunEnded(false);
+          setGuesses([]);
+          setIsWin(null);
+          setIsLoss(false);
         }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  const fetchPuzzleAgain = () => {
-    if (!sessionId || !puzzleId) return;
-    fetch(`/api/puzzle/${puzzleId}?sessionId=${sessionId}`)
+  const fetchToday = () => {
+    if (!sessionId) return;
+    fetch(`/api/today?sessionId=${sessionId}`)
       .then((r) => r.json())
       .then((data) => {
+        setPuzzleId(data.currentPuzzleId ?? data.puzzleId);
         setHints(data.hints ?? []);
         setLetterHelp(data.letterHelp ?? null);
+        setMaxGuesses(data.config?.maxGuesses ?? 8);
         setRevealedTarget(data.revealedTarget ?? null);
-        if (data.difficulty === "hard") setDifficulty("hard");
-      });
+        setPercentileUnavailable(!!data.percentileUnavailable);
+        setDifficulty(data.difficulty === "hard" ? "hard" : "normal");
+        setLevel(data.level ?? "easy");
+        setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
+        if (data.runEnded) {
+          setRunEnded(true);
+          if (data.isWin !== undefined) setIsWin(data.isWin);
+          if (data.isLoss !== undefined) setIsLoss(data.isLoss);
+          if (Array.isArray(data.guesses) && data.guesses.length > 0) setGuesses(data.guesses);
+        } else {
+          setRunEnded(false);
+          setGuesses([]);
+          setIsWin(null);
+          setIsLoss(false);
+        }
+      })
+      .catch(() => {});
+  };
+
+  const fetchPuzzleAgain = () => {
+    fetchToday();
   };
 
   const handleGuess = (result: {
@@ -120,9 +150,10 @@ export default function Home() {
     setIsWin(result.isWin);
     setIsLoss(result.isLoss);
     if (result.runEnded !== undefined) setRunEnded(result.runEnded);
+    else fetchPuzzleAgain();
     if (result.revealedTarget) setRevealedTarget(result.revealedTarget);
     if (result.percentileUnavailable) setPercentileUnavailable(true);
-    fetchPuzzleAgain();
+    if (result.runEnded) fetchToday();
   };
 
   const gameEnded = runEnded;
@@ -161,17 +192,24 @@ export default function Home() {
               fetch(`/api/today?sessionId=${sessionId}`)
                 .then((r) => { if (!r.ok) throw new Error("Could not load today's puzzle."); return r.json(); })
                 .then((data) => {
-                  setPuzzleId(data.puzzleId);
+                  setPuzzleId(data.currentPuzzleId ?? data.puzzleId);
                   setHints(data.hints ?? []);
                   setLetterHelp(data.letterHelp ?? null);
                   setMaxGuesses(data.config?.maxGuesses ?? 8);
                   setRevealedTarget(data.revealedTarget ?? null);
                   setPercentileUnavailable(!!data.percentileUnavailable);
+                  setLevel(data.level ?? "easy");
+                  setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
                   if (data.runEnded) {
                     setRunEnded(true);
                     if (data.isWin !== undefined) setIsWin(data.isWin);
                     if (data.isLoss !== undefined) setIsLoss(data.isLoss);
                     if (Array.isArray(data.guesses) && data.guesses.length > 0) setGuesses(data.guesses);
+                  } else {
+                    setRunEnded(false);
+                    setGuesses([]);
+                    setIsWin(null);
+                    setIsLoss(false);
                   }
                 })
                 .catch((e) => setError(e.message))
@@ -193,8 +231,6 @@ export default function Home() {
         <h1 className="app-logo" style={{ margin: 0 }}>
           <span style={{ color: "var(--accent)" }}>Near</span>
           <span style={{ color: "var(--text)" }}>Word</span>
-        </h1>
-        {difficulty === "hard" && (
           <span
             style={{
               fontSize: "var(--text-xs)",
@@ -202,12 +238,18 @@ export default function Home() {
               color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              marginLeft: "var(--space-2)",
             }}
           >
-            Hard
+            {" "}{level}
           </span>
-        )}
+        </h1>
       </div>
+      {level === "easy" && (
+        <p style={{ color: "var(--text-subtle)", fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>
+          Easy = warm-up, Medium = main challenge, Hard = toughest.
+        </p>
+      )}
       <p style={{ color: "var(--text-muted)", fontSize: "var(--text-base)", marginBottom: "var(--space-1)" }}>
         Get as close as you can to the secret word.
       </p>

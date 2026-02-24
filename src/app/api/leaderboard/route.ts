@@ -32,12 +32,24 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     const entries: { sessionId: string; isWin: boolean; guessCount: number; bestPercentile: number | null }[] =
-      (rows ?? []).map((r) => ({
-        sessionId: r.session_id as string,
-        isWin: r.is_win === true,
-        guessCount: Array.isArray(r.guesses) ? r.guesses.length : 0,
-        bestPercentile: (r.best as { percentile?: number } | null)?.percentile ?? null,
-      }));
+      (rows ?? []).map((r) => {
+        const best = r.best as { percentile?: number } | null;
+        const guesses = Array.isArray(r.guesses) ? r.guesses as { percentile?: number | null }[] : [];
+        const fromBest = best?.percentile ?? null;
+        const fromGuesses =
+          fromBest != null
+            ? fromBest
+            : guesses.length > 0
+              ? Math.max(...guesses.map((g) => g.percentile ?? 0))
+              : null;
+        const bestPercentile = fromBest ?? (fromGuesses != null && fromGuesses > 0 ? fromGuesses : null);
+        return {
+          sessionId: r.session_id as string,
+          isWin: r.is_win === true,
+          guessCount: guesses.length,
+          bestPercentile,
+        };
+      });
 
     entries.sort((a, b) => {
       if (a.isWin !== b.isWin) return a.isWin ? -1 : 1;

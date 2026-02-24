@@ -19,15 +19,12 @@ export async function GET(
   }
 
   const config = defaultGameConfig;
-  let hints = [puzzle.hints[0]];
+  const hints = [...puzzle.hints];
   let letterHelp: { firstLetter: string; wordLength: number } | undefined;
 
   if (sessionId) {
     const run = await runStore.getRun(puzzleId, sessionId);
     const guessCount = run?.guesses.length ?? 0;
-    if (guessCount >= config.progressiveHints.revealSecondHintAfterGuesses && puzzle.hints[1]) {
-      hints = [...puzzle.hints];
-    }
     if (
       config.letterHelp.revealAfterGuesses != null &&
       guessCount >= config.letterHelp.revealAfterGuesses
@@ -52,6 +49,7 @@ export async function GET(
     mode: puzzle.mode,
     targetWordLength,
     difficulty: puzzle.difficulty ?? "normal",
+    level: puzzle.level,
   };
   if (letterHelp) response.letterHelp = letterHelp;
 

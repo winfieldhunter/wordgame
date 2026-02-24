@@ -63,7 +63,7 @@ A Wordle-like semantic distance game: you get a short, human-written hint and tr
 
 **Precompute (embeddings + puzzle caches) is not run during Vercel build.** Build runs `next build` only. **In production, today's puzzle cache must be available** or the guess API returns `503 CACHE_UNAVAILABLE` and users see a friendly "cache temporarily unavailable" message instead of percentile. Use either committed cache or blob storage.
 
-**Today's puzzle ID** is `daily-YYYY-MM-DD` (date is in `PUZZLE_TIMEZONE`, default midnight Eastern). **One-time shift:** To show “tomorrow’s” puzzle for today (e.g. so everyone gets a fresh puzzle after already playing), set `PUZZLE_DATE_OFFSET_DAYS=1` and `PUZZLE_OFFSET_APPLY_UNTIL=YYYY-MM-DD` (that calendar day only) in Vercel and in GitHub repo Variables; remove or clear them after that date so the next day is normal. The cache file must be named **`<puzzleId>.json`** (e.g. `daily-2026-02-22.json`) in `data/puzzle-cache/` or at `{PUZZLE_CACHE_BASE_URL}/{puzzleId}.json`.
+**Today's puzzle IDs** are `daily-YYYY-MM-DD-easy`, `daily-YYYY-MM-DD-medium`, `daily-YYYY-MM-DD-hard` (date is in `PUZZLE_TIMEZONE`, default midnight Eastern). **One-time shift:** To show “tomorrow’s” puzzle for today (e.g. so everyone gets a fresh puzzle after already playing), set `PUZZLE_DATE_OFFSET_DAYS=1` and `PUZZLE_OFFSET_APPLY_UNTIL=YYYY-MM-DD` (that calendar day only) in Vercel and in GitHub repo Variables; remove or clear them after that date so the next day is normal. Cache files must be named **`<puzzleId>.json`** (e.g. `daily-2026-02-22-easy.json`) in `data/puzzle-cache/` or at `{PUZZLE_CACHE_BASE_URL}/{puzzleId}.json`.
 
 - **Option A — Committed cache (dev / small deploys)**  
   Run precompute locally and export puzzle JSONs into the repo so the app can read them at runtime:
@@ -74,7 +74,7 @@ A Wordle-like semantic distance game: you get a short, human-written hint and tr
   This writes `data/puzzle-cache/<puzzleId>.json` (e.g. today’s `daily-2026-02-22.json` for today). **Commit at least `data/puzzle-cache/daily-<today>.json`** so production has today's cache. At runtime the app loads from `data/puzzle-cache/` (then `.cache/puzzles/` if present). Good for dev or a single puzzle; avoid committing many large files.
 
 - **Option B — External blob storage (recommended for production)**  
-  1. Run precompute locally or in CI; upload `.cache/puzzles/<puzzleId>.json` to a public or signed URL (e.g. S3, R2, Vercel Blob). **Ensure today's file is uploaded** (e.g. `daily-YYYY-MM-DD.json`).
+  1. Run precompute locally or in CI; upload puzzle JSONs to a public URL (e.g. R2, S3). **Ensure today's files are uploaded** (e.g. `daily-YYYY-MM-DD-easy.json`, `-medium.json`, `-hard.json`).
   2. Set the base URL in your deployment env:
      ```bash
      PUZZLE_CACHE_BASE_URL=https://your-bucket.s3.amazonaws.com/puzzle-cache
@@ -89,12 +89,9 @@ A Wordle-like semantic distance game: you get a short, human-written hint and tr
 - **Automated daily cache (GitHub Action)**  
   `.github/workflows/daily-puzzle-cache.yml` runs at **00:05 Eastern (05:05 UTC)** every day: precomputes **today’s** and **tomorrow’s** puzzle caches (so percentiles are always available at midnight), then uploads to R2 or commits. Set **`OPENAI_API_KEY`** in repo secrets. The puzzle day flips at midnight in `PUZZLE_TIMEZONE` (default America/New_York). The workflow caches `.cache/embeddings.jsonl` between runs (keyed by vocabulary) so only new words are embedded after the first run.
 
-- **Cloudflare R2 (Option B)**  
-  In the repo: **Secrets** — `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL` (R2 S3 API endpoint, e.g. `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`). **Variables** — `UPLOAD_TO_R2=true` (enables R2 upload; GitHub doesn't allow checking secrets in `if:`), and optionally `S3_BUCKET=nearword-cache`, `S3_PREFIX=puzzle-cache`, `AWS_REGION=auto`. When `UPLOAD_TO_R2` is true, the workflow uploads to R2 at key `puzzle-cache/daily-YYYY-MM-DD.json`; otherwise it commits and pushes. In **Vercel** (Production) set:
-  ```bash
-  PUZZLE_CACHE_BASE_URL=https://pub-b8b83d145fa34d339c1fea39c5391cd.r2.dev/puzzle-cache
-  ```
-  (No trailing slash; R2 public dev URL serves object keys directly under this path.) After redeploy and running the Daily puzzle cache workflow, **GET /api/health** should show `cacheSourceUsed: "blob"` and `percentileAvailable: true`. Verify the blob directly: `https://pub-b8b83d145fa34d339c1fea39c5391cd.r2.dev/puzzle-cache/daily-YYYY-MM-DD.json` (today’s date in your puzzle timezone) should return JSON.
+- **Cloudflare R2 (Option B — make real cache the norm)**  
+  Use R2 so the daily workflow uploads today's and tomorrow's cache; the app fetches from a public URL and percentile ranking works in production. **Step-by-step:** see **[docs/R2-SETUP.md](docs/R2-SETUP.md)**.  
+  Short version: create an R2 bucket, enable public r2.dev URL, create an API token, set **GitHub Actions** secrets (`OPENAI_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`) and variable `UPLOAD_TO_R2=true`, set **Vercel** env `PUZZLE_CACHE_BASE_URL=https://pub-xxxx.r2.dev/puzzle-cache` (public URL + `/puzzle-cache` only — do not include the bucket name in the path; R2 uses the object key as the path). No trailing slash. The workflow uploads `daily-YYYY-MM-DD-{easy,medium,hard}.json`; after it runs, **GET /api/health** should show `cacheSourceUsed: "blob"` and `percentileAvailable: true`. Open `{PUZZLE_CACHE_BASE_URL}/daily-YYYY-MM-DD-easy.json` (today’s date in your puzzle timezone) should return JSON.
 
 - **Health check**  
   **GET /api/health** returns `{ todayPuzzleId, cacheSourceUsed: "memory"|"local"|"blob"|"none", percentileAvailable }` so you can verify production at a glance.

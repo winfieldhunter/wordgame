@@ -1,13 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPuzzleById, getTodayPuzzleId } from "@/server/puzzles/catalog";
+import { getPuzzleById, getTodayPuzzleIds } from "@/server/puzzles/catalog";
 import { runStore } from "@/server/stores";
 import { defaultGameConfig, getPublicConfig } from "@/config/gameConfig";
+import type { PuzzleLevel } from "@/server/puzzles/puzzleId";
+
+const LEVEL_ORDER: PuzzleLevel[] = ["easy", "medium", "hard"];
 
 export async function GET(request: NextRequest) {
-  const puzzleId = getTodayPuzzleId();
+  const ids = getTodayPuzzleIds();
   const sessionId = request.nextUrl.searchParams.get("sessionId") ?? undefined;
 
-  const puzzle = getPuzzleById(puzzleId);
+  const todayPuzzleIds = { easy: ids.easy, medium: ids.medium, hard: ids.hard };
+
+  let currentPuzzleId: string;
+  const completedLevels: PuzzleLevel[] = [];
+
+  if (sessionId) {
+    for (const level of LEVEL_ORDER) {
+      const puzzleId = ids[level];
+      const completed = await runStore.isCompleted(puzzleId, sessionId);
+      if (completed) completedLevels.push(level);
+    }
+    const firstIncomplete = LEVEL_ORDER.find((level) => !completedLevels.includes(level));
+    currentPuzzleId = firstIncomplete ? ids[firstIncomplete]! : ids.hard;
+  } else {
+    currentPuzzleId = ids.easy;
+  }
+
+  const puzzle = getPuzzleById(currentPuzzleId);
   if (!puzzle) {
     return NextResponse.json(
       { error: "No puzzle for today.", code: "NOT_FOUND" },
@@ -15,16 +35,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const level = puzzle.level ?? "easy";
   const config = defaultGameConfig;
-  let hints = [puzzle.hints[0]];
+
+  const hints = [...puzzle.hints];
   let letterHelp: { firstLetter: string; wordLength: number } | undefined;
 
   if (sessionId) {
-    const run = await runStore.getRun(puzzleId, sessionId);
+    const run = await runStore.getRun(currentPuzzleId, sessionId);
     const guessCount = run?.guesses.length ?? 0;
-    if (guessCount >= config.progressiveHints.revealSecondHintAfterGuesses && puzzle.hints[1]) {
-      hints = [...puzzle.hints];
-    }
     if (
       config.letterHelp.revealAfterGuesses != null &&
       guessCount >= config.letterHelp.revealAfterGuesses
@@ -43,7 +62,11 @@ export async function GET(request: NextRequest) {
   const targetWordLength = puzzle.target.trim().split(/\s+/)[0]?.length ?? 0;
 
   const response: Record<string, unknown> = {
-    puzzleId,
+    puzzleId: currentPuzzleId,
+    todayPuzzleIds,
+    currentPuzzleId,
+    completedLevels,
+    level,
     hints,
     config: getPublicConfig(config),
     createdAt: puzzle.createdAt,
@@ -54,7 +77,7 @@ export async function GET(request: NextRequest) {
   if (letterHelp) response.letterHelp = letterHelp;
 
   if (sessionId) {
-    const run = await runStore.getRun(puzzleId, sessionId);
+    const run = await runStore.getRun(currentPuzzleId, sessionId);
     if (run?.endedAt != null) {
       response.runEnded = true;
       response.revealedTarget = puzzle.target;

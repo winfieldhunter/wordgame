@@ -31,14 +31,17 @@ export function GameScreen({
   const [err, setErr] = useState<string | null>(null);
   const [newHintIndex, setNewHintIndex] = useState<number | null>(null);
   const [scratchRest, setScratchRest] = useState("");
+  const [revealedByClick, setRevealedByClick] = useState(1);
   const inputRef = useRef<HTMLInputElement>(null);
   const scratchInputRef = useRef<HTMLInputElement>(null);
-  const prevHintsLengthRef = useRef(hints.length);
+  const prevVisibleRef = useRef(1);
+
+  const autoReveal = guessCount >= 6 ? 3 : guessCount >= 3 ? 2 : 1;
+  const visibleHintsCount = Math.min(hints.length, Math.max(1, revealedByClick, autoReveal));
 
   useEffect(() => {
-    if (hints.length > prevHintsLengthRef.current && prevHintsLengthRef.current > 0) {
-      const unlockedIndex = hints.length - 1;
-      setNewHintIndex(unlockedIndex);
+    if (visibleHintsCount > prevVisibleRef.current) {
+      setNewHintIndex(visibleHintsCount - 1);
       if (typeof window !== "undefined") {
         const el = document.getElementById("hints-block");
         if (el) {
@@ -54,10 +57,11 @@ export function GameScreen({
         }
       }
       const t = setTimeout(() => setNewHintIndex(null), 1200);
+      prevVisibleRef.current = visibleHintsCount;
       return () => clearTimeout(t);
     }
-    prevHintsLengthRef.current = hints.length;
-  }, [hints.length]);
+    prevVisibleRef.current = visibleHintsCount;
+  }, [visibleHintsCount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,21 +160,54 @@ export function GameScreen({
             {hints[0]}
           </p>
         </div>
-        {hints.length > 1 && (
+        {hints.length >= 2 && (
           <div className={newHintIndex === 1 ? "hint-block hint-block--new" : "hint-block"} style={{ marginTop: "var(--space-3)" }}>
             <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-subtle)", marginBottom: "var(--space-1)" }}>
               Hint 2 of 3
               {newHintIndex === 1 && <span className="hint-new-badge">New</span>}
             </p>
-            <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--text-muted)", lineHeight: 1.5 }}>
-              {hints[1]}
+            {visibleHintsCount >= 2 ? (
+              <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                {hints[1]}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRevealedByClick(2)}
+                className="btn-secondary"
+                style={{ marginTop: "var(--space-1)", padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-sm)" }}
+              >
+                Reveal hint 2
+              </button>
+            )}
+          </div>
+        )}
+        {hints.length >= 3 && (
+          <div className={newHintIndex === 2 ? "hint-block hint-block--new" : "hint-block"} style={{ marginTop: "var(--space-3)" }}>
+            <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-subtle)", marginBottom: "var(--space-1)" }}>
+              Hint 3 of 3
+              {newHintIndex === 2 && <span className="hint-new-badge">New</span>}
             </p>
+            {visibleHintsCount >= 3 ? (
+              <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                {hints[2]}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRevealedByClick(3)}
+                className="btn-secondary"
+                style={{ marginTop: "var(--space-1)", padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-sm)" }}
+              >
+                Reveal hint 3
+              </button>
+            )}
           </div>
         )}
         {letterHelp && (
           <>
             <p style={{ margin: "var(--space-3) 0 var(--space-1)", fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>
-              Hint 3 of 3
+              Letter help
             </p>
             <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--text-subtle)" }}>
               Starts with <strong>{letterHelp.firstLetter}</strong> · {letterHelp.wordLength} letters

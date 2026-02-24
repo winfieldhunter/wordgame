@@ -1,5 +1,6 @@
 import { dailyPuzzles } from "./dailyPuzzles";
 import type { PuzzleDifficulty } from "./dailyPuzzles";
+import type { PuzzleLevel } from "./puzzleId";
 import { getPuzzleIdForDate, formatDateKey } from "./puzzleId";
 
 export interface PuzzleDef {
@@ -9,35 +10,42 @@ export interface PuzzleDef {
   createdAt: string;
   mode: "daily" | "dev";
   difficulty?: PuzzleDifficulty;
+  level?: PuzzleLevel;
 }
 
 /**
- * Get puzzle for a calendar date. Uses UTC date for determinism.
+ * Get puzzle for a calendar date and level. Uses UTC date for determinism.
  */
-export function getPuzzleForDate(date: Date): PuzzleDef | null {
+export function getPuzzleForDate(date: Date, level: PuzzleLevel): PuzzleDef | null {
   const key = formatDateKey(date);
-  const found = dailyPuzzles.find((p) => p.date === key);
+  const found = dailyPuzzles.find((p) => p.date === key && p.level === level);
   if (!found) return null;
-  const hintSet = found.hintsRiddle ?? found.hints;
   return {
-    puzzleId: getPuzzleIdForDate(date),
-    hints: [...hintSet],
+    puzzleId: getPuzzleIdForDate(date, level),
+    hints: [...found.hints],
     target: found.target.toLowerCase().trim(),
     createdAt: `${key}T12:00:00Z`,
     mode: "daily",
     difficulty: found.difficulty,
+    level: found.level,
   };
 }
 
 /**
- * Get puzzle by ID. Supports daily-YYYY-MM-DD and dev-0001 style.
+ * Get puzzle by ID. Supports daily-YYYY-MM-DD-{easy|medium|hard}, legacy daily-YYYY-MM-DD (→ medium), and dev-0001.
  */
 export function getPuzzleById(puzzleId: string): PuzzleDef | null {
-  const dailyMatch = puzzleId.match(/^daily-(\d{4}-\d{2}-\d{2})$/);
-  if (dailyMatch) {
-    const [_, dateStr] = dailyMatch;
-    const [y, m, d] = dateStr.split("-").map(Number);
-    return getPuzzleForDate(new Date(Date.UTC(y, m - 1, d)));
+  const withLevel = puzzleId.match(/^daily-(\d{4}-\d{2}-\d{2})-(easy|medium|hard)$/);
+  if (withLevel) {
+    const [, dateStr, level] = withLevel;
+    const [y, m, d] = dateStr!.split("-").map(Number);
+    return getPuzzleForDate(new Date(Date.UTC(y, m - 1, d)), level as PuzzleLevel);
+  }
+  const legacyMatch = puzzleId.match(/^daily-(\d{4}-\d{2}-\d{2})$/);
+  if (legacyMatch) {
+    const [, dateStr] = legacyMatch;
+    const [y, m, d] = dateStr!.split("-").map(Number);
+    return getPuzzleForDate(new Date(Date.UTC(y, m - 1, d)), "medium");
   }
   if (puzzleId === "dev-0001") {
     return getDevPuzzle();
@@ -54,6 +62,7 @@ function getDevPuzzle(): PuzzleDef {
     hints: [
       "The feeling after everyone finally leaves.",
       "When the house is quiet and you can hear yourself think.",
+      "The opposite of chaos.",
     ],
     target: "peace",
     createdAt: "2026-02-22T12:00:00Z",
@@ -65,4 +74,5 @@ function getDevPuzzle(): PuzzleDef {
 /**
  * Today’s puzzle ID. A new puzzle is used each calendar day at midnight in PUZZLE_TIMEZONE (default America/New_York).
  */
-export { getTodayPuzzleId } from "./puzzleId";
+export { getTodayPuzzleId, getTodayPuzzleIds } from "./puzzleId";
+export type { PuzzleLevel } from "./puzzleId";

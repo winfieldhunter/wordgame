@@ -23,9 +23,11 @@ interface SemanticMapProps {
   puzzleId: string;
   /** When true, show "Answer" label near target marker (e.g. for screenshots after win). */
   isWin?: boolean;
+  /** Client's list of normalized guesses (source of truth so map labels match "Your guesses"). */
+  clientGuesses?: string[];
 }
 
-export function SemanticMap({ sessionId, puzzleId, isWin }: SemanticMapProps) {
+export function SemanticMap({ sessionId, puzzleId, isWin, clientGuesses }: SemanticMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [data, setData] = useState<{
     points: Point[];
@@ -43,7 +45,11 @@ export function SemanticMap({ sessionId, puzzleId, isWin }: SemanticMapProps) {
   showGuessesRef.current = showGuesses;
 
   useEffect(() => {
-    fetch(`/api/map/${puzzleId}?sessionId=${sessionId}`)
+    const params = new URLSearchParams({ sessionId });
+    if (clientGuesses != null && clientGuesses.length > 0) {
+      clientGuesses.forEach((g) => params.append("clientGuesses", g));
+    }
+    fetch(`/api/map/${puzzleId}?${params.toString()}`)
       .then(async (r) => {
         if (r.status === 403) throw new Error("Complete the puzzle first. If you just finished, add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your Vercel project so your run is saved.");
         if (!r.ok) {
@@ -58,7 +64,7 @@ export function SemanticMap({ sessionId, puzzleId, isWin }: SemanticMapProps) {
       })
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false));
-  }, [sessionId, puzzleId]);
+  }, [sessionId, puzzleId, clientGuesses]);
 
   useEffect(() => {
     if (!data || !canvasRef.current) return;
@@ -262,6 +268,9 @@ export function SemanticMap({ sessionId, puzzleId, isWin }: SemanticMapProps) {
           Show crowd
         </label>
       </div>
+      <p style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
+        Your guesses = labeled dots. Crowd = grey dots (other players’ popular guesses).
+      </p>
       <canvas
         ref={canvasRef}
         width={400}

@@ -31,7 +31,9 @@ import { OpenAIEmbeddingsProvider } from "../src/server/embeddings/openai";
 import { cosineSimilarity } from "../src/server/scoring/scoring";
 import type { SortedSimilarityEntry } from "../src/server/scoring/scoring";
 import { getPuzzleForDate, getPuzzleById } from "../src/server/puzzles/catalog";
-import { getTodayPuzzleId } from "../src/server/puzzles/puzzleId";
+import { getTodayPuzzleIds } from "../src/server/puzzles/puzzleId";
+
+const LEVELS = ["easy", "medium", "hard"] as const;
 
 const CACHE_DIR = join(process.cwd(), ".cache");
 const EMBEDDINGS_PATH = join(CACHE_DIR, "embeddings.jsonl");
@@ -123,21 +125,28 @@ async function main() {
 
   const puzzleIds: string[] = [];
   if (todayOnly) {
-    const id = getTodayPuzzleId();
-    if (getPuzzleById(id)) puzzleIds.push(id);
+    const ids = getTodayPuzzleIds();
+    for (const level of LEVELS) {
+      const id = ids[level];
+      if (getPuzzleById(id)) puzzleIds.push(id);
+    }
   } else if (fromDate && toDate) {
     const [fy, fm, fd] = fromDate.split("-").map(Number);
     const [ty, tm, td] = toDate.split("-").map(Number);
     const start = new Date(Date.UTC(fy, fm - 1, fd));
     const end = new Date(Date.UTC(ty, tm - 1, td));
     for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-      const p = getPuzzleForDate(d);
-      if (p) puzzleIds.push(p.puzzleId);
+      for (const level of LEVELS) {
+        const p = getPuzzleForDate(new Date(d), level);
+        if (p) puzzleIds.push(p.puzzleId);
+      }
     }
   } else {
     puzzleIds.push("dev-0001");
-    const today = getTodayPuzzleId();
-    if (getPuzzleById(today)) puzzleIds.push(today);
+    const ids = getTodayPuzzleIds();
+    for (const level of LEVELS) {
+      if (getPuzzleById(ids[level])) puzzleIds.push(ids[level]);
+    }
   }
 
   for (const puzzleId of puzzleIds) {

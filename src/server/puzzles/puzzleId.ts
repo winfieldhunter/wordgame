@@ -45,23 +45,46 @@ function addDaysToDateKey(dateKey: string, days: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
+export type PuzzleLevel = "easy" | "medium" | "hard";
+
+const LEVELS: PuzzleLevel[] = ["easy", "medium", "hard"];
+
 /**
- * Puzzle ID for a given calendar day (UTC). Format: daily-YYYY-MM-DD.
+ * Puzzle ID for a given calendar day (UTC). Format: daily-YYYY-MM-DD or daily-YYYY-MM-DD-{level}.
  */
-export function getPuzzleIdForDate(date: Date): string {
-  return `daily-${formatDateKey(date)}`;
+export function getPuzzleIdForDate(date: Date, level?: PuzzleLevel): string {
+  const key = formatDateKey(date);
+  if (level) return `daily-${key}-${level}`;
+  return `daily-${key}`;
 }
 
 /**
- * Today's puzzle ID. A new puzzle is used each calendar day at midnight in PUZZLE_TIMEZONE (default America/New_York).
- * Optional one-time shift: set PUZZLE_DATE_OFFSET_DAYS=1 and PUZZLE_OFFSET_APPLY_UNTIL=YYYY-MM-DD so that for dates <= that day we show the next day's puzzle (fresh for everyone). After that date, no offset.
- * Runtime and precompute must both call this so the cache key matches.
+ * Today's date key (with optional offset). Used to derive today's puzzle IDs.
  */
-export function getTodayPuzzleId(): string {
+function getTodayKeyWithOffset(): string {
   let todayKey = getTodayDateKeyInZone();
-  const offsetDays = PUZZLE_DATE_OFFSET_DAYS || 1; // default 1 for one-time shift when until is set
+  const offsetDays = PUZZLE_DATE_OFFSET_DAYS || 1;
   if (PUZZLE_OFFSET_APPLY_UNTIL && todayKey <= PUZZLE_OFFSET_APPLY_UNTIL) {
     todayKey = addDaysToDateKey(todayKey, offsetDays);
   }
-  return `daily-${todayKey}`;
+  return todayKey;
+}
+
+/**
+ * Today's three puzzle IDs (easy, medium, hard). A new set each calendar day at midnight in PUZZLE_TIMEZONE.
+ */
+export function getTodayPuzzleIds(): { easy: string; medium: string; hard: string } {
+  const key = getTodayKeyWithOffset();
+  return {
+    easy: `daily-${key}-easy`,
+    medium: `daily-${key}-medium`,
+    hard: `daily-${key}-hard`,
+  };
+}
+
+/**
+ * Today's puzzle ID (legacy: returns easy). Use getTodayPuzzleIds() for three-per-day.
+ */
+export function getTodayPuzzleId(): string {
+  return getTodayPuzzleIds().easy;
 }

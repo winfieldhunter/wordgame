@@ -14,12 +14,17 @@ export async function GET() {
   const cacheSourceUsed =
     source === ".cache" || source === "data/puzzle-cache" ? "local" : source;
 
+  const base = process.env.PUZZLE_CACHE_BASE_URL;
   const puzzleCacheBaseUrlSet =
-    typeof process.env.PUZZLE_CACHE_BASE_URL === "string" &&
-    process.env.PUZZLE_CACHE_BASE_URL.length > 0;
+    typeof base === "string" && base.length > 0;
 
   const puzzleOffsetDays = parseInt(process.env.PUZZLE_DATE_OFFSET_DAYS ?? "0", 10) || 0;
   const puzzleOffsetUntil = process.env.PUZZLE_OFFSET_APPLY_UNTIL ?? null;
+
+  const puzzleCacheFetchUrl =
+    puzzleCacheBaseUrlSet && base
+      ? base.replace(/\/$/, "") + "/" + encodeURIComponent(todayPuzzleId) + ".json"
+      : null;
 
   return NextResponse.json({
     todayPuzzleId,
@@ -27,6 +32,7 @@ export async function GET() {
     percentileAvailable,
     cacheSize,
     puzzleCacheBaseUrlSet,
+    puzzleCacheFetchUrl,
     puzzleOffset: puzzleOffsetDays || puzzleOffsetUntil ? { days: puzzleOffsetDays, until: puzzleOffsetUntil } : null,
   });
 }

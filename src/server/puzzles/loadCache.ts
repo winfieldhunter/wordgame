@@ -15,8 +15,8 @@ const CACHE_DIR = join(process.cwd(), ".cache", "puzzles");
 const COMMITTED_CACHE_DIR = join(process.cwd(), "data", "puzzle-cache");
 
 const FETCH_TIMEOUT_MS = 3000;
-/** 404: puzzle truly missing — long TTL, API returns 404 PUZZLE_NOT_FOUND */
-const NEGATIVE_CACHE_TTL_NOT_FOUND_MS = 60 * 60 * 1000; // 60 min
+/** 404: puzzle missing — short TTL so we retry soon after workflow uploads (API returns 404 PUZZLE_NOT_FOUND) */
+const NEGATIVE_CACHE_TTL_NOT_FOUND_MS = 2 * 60 * 1000; // 2 min
 /** Timeout/5xx/invalid: transient — short TTL, API returns 503 CACHE_UNAVAILABLE */
 const NEGATIVE_CACHE_TTL_UNAVAILABLE_MS = 60 * 1000; // 60 sec
 
