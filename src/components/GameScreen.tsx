@@ -32,6 +32,7 @@ export function GameScreen({
   const [newHintIndex, setNewHintIndex] = useState<number | null>(null);
   const [scratchWord, setScratchWord] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const scratchInputRef = useRef<HTMLInputElement>(null);
   const prevHintsLengthRef = useRef(hints.length);
 
   useEffect(() => {
@@ -192,10 +193,55 @@ export function GameScreen({
             Scratch paper
           </p>
           <p style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
-            Try words here — doesn’t use a guess.
+            Try words here — doesn’t use a guess. {letterHelp.wordLength} letters total.
           </p>
-          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => scratchInputRef.current?.focus()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                scratchInputRef.current?.focus();
+              }
+            }}
+            style={{ position: "relative", cursor: "text", outline: "none" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "var(--space-1)",
+                alignItems: "flex-end",
+                flexWrap: "wrap",
+              }}
+            >
+              {Array.from({ length: letterHelp.wordLength }, (_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 24,
+                    minWidth: 24,
+                    height: 32,
+                    borderBottom: "2px solid var(--text-muted)",
+                    fontSize: "var(--text-base)",
+                    fontFamily: "var(--font-mono, monospace)",
+                    color: "var(--text)",
+                  }}
+                  aria-hidden
+                >
+                  {i === 0
+                    ? letterHelp.firstLetter
+                    : scratchWord.length > i
+                      ? scratchWord[i]
+                      : ""}
+                </span>
+              ))}
+            </div>
             <input
+              ref={scratchInputRef}
               type="text"
               value={scratchWord}
               onChange={(e) => {
@@ -203,18 +249,25 @@ export function GameScreen({
                 const fixed = (letterHelp.firstLetter + raw.slice(1)).slice(0, letterHelp.wordLength);
                 setScratchWord(fixed);
               }}
-              placeholder={`${letterHelp.firstLetter}${"_".repeat(letterHelp.wordLength - 1)}`}
               maxLength={letterHelp.wordLength}
               autoComplete="off"
               style={{
-                flex: "1 1 140px",
-                minWidth: 0,
-                fontSize: "var(--text-base)",
-                padding: "var(--space-2) var(--space-3)",
-                fontFamily: "var(--font-mono, monospace)",
+                position: "absolute",
+                width: 1,
+                height: 1,
+                opacity: 0,
+                pointerEvents: "none",
+                left: 0,
+                top: 0,
               }}
-              aria-label="Scratch paper: try a word"
+              aria-label="Scratch paper: type a word"
+              tabIndex={-1}
             />
+          </div>
+          <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
+            {letterHelp.wordLength - scratchWord.length} letters left
+          </p>
+          <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
             <button
               type="button"
               onClick={() => setScratchWord("")}
