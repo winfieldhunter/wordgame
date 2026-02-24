@@ -35,6 +35,13 @@ jobs:
         run: npm run fetch-vocabulary
         continue-on-error: true
 
+      - name: Restore embeddings cache
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: embeddings-${{ hashFiles('data/vocabulary.txt') }}
+          restore-keys: embeddings-
+
       - name: Precompute today's puzzle cache
         run: npm run precompute:export -- --today
         env:
