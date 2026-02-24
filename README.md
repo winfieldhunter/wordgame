@@ -87,7 +87,7 @@ A Wordle-like semantic distance game: you get a short, human-written hint and tr
   `RUN_PRECOMPUTE=1 npm run build`
 
 - **Automated daily cache (GitHub Action)**  
-  `.github/workflows/daily-puzzle-cache.yml` runs at **00:05 Eastern (05:05 UTC)** every day: `npm ci` → `npm run fetch-vocabulary` → restore embeddings cache → `npm run precompute:export -- --today`. Then either **upload to R2/S3** or **commit and push** (see below). Set **`OPENAI_API_KEY`** in repo secrets. The puzzle day flips at midnight in `PUZZLE_TIMEZONE` (default America/New_York). The workflow caches `.cache/embeddings.jsonl` between runs (keyed by vocabulary) so only new words are embedded after the first run.
+  `.github/workflows/daily-puzzle-cache.yml` runs at **00:05 Eastern (05:05 UTC)** every day: precomputes **today’s** and **tomorrow’s** puzzle caches (so percentiles are always available at midnight), then uploads to R2 or commits. Set **`OPENAI_API_KEY`** in repo secrets. The puzzle day flips at midnight in `PUZZLE_TIMEZONE` (default America/New_York). The workflow caches `.cache/embeddings.jsonl` between runs (keyed by vocabulary) so only new words are embedded after the first run.
 
 - **Cloudflare R2 (Option B)**  
   In the repo: **Secrets** — `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL` (R2 S3 API endpoint, e.g. `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`). **Variables** — `UPLOAD_TO_R2=true` (enables R2 upload; GitHub doesn't allow checking secrets in `if:`), and optionally `S3_BUCKET=nearword-cache`, `S3_PREFIX=puzzle-cache`, `AWS_REGION=auto`. When `UPLOAD_TO_R2` is true, the workflow uploads to R2 at key `puzzle-cache/daily-YYYY-MM-DD.json`; otherwise it commits and pushes. In **Vercel** (Production) set:
