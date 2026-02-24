@@ -82,8 +82,8 @@ jobs:
           fi
           if [ -f "data/puzzle-cache/$TODAY_ID.json" ]; then
             aws s3 cp "data/puzzle-cache/$TODAY_ID.json" "$S3_DEST" --endpoint-url "$AWS_ENDPOINT_URL"
-            echo "=== Verify: list after upload ==="
-            aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" --endpoint-url "$AWS_ENDPOINT_URL" | grep -E "$TODAY_ID" || aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" --endpoint-url "$AWS_ENDPOINT_URL"
+            echo "=== Verify: list after upload (best-effort; R2 may return NoSuchKey for list) ==="
+            aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" --endpoint-url "$AWS_ENDPOINT_URL" | grep -E "$TODAY_ID" || aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" --endpoint-url "$AWS_ENDPOINT_URL" || true
             echo "Uploaded $TODAY_ID.json to R2. App fetches: PUZZLE_CACHE_BASE_URL/$TODAY_ID.json"
           else
             echo "No file data/puzzle-cache/$TODAY_ID.json"
