@@ -1,0 +1,108 @@
+# Daily puzzle cache: precompute today's percentile cache and either upload to blob or commit+push.
+# Runs at 00:05 UTC. Set OPENAI_API_KEY; for blob upload set AWS_* or use commit path.
+name: Daily puzzle cache
+
+on:
+  schedule:
+    # 00:05 UTC every day
+    - cron: "5 0 * * *"
+  workflow_dispatch:
+
+env:
+  TZ: UTC
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch vocabulary
+        run: npm run fetch-vocabulary
+        continue-on-error: true
+
+      - name: Precompute today's puzzle cache
+        run: npm run precompute:export -- --today
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: List generated cache artifact
+        run: |
+          echo "=== data/puzzle-cache/ contents ==="
+          ls -lh data/puzzle-cache/ || true
+          TODAY_ID="daily-$(date -u +%Y-%m-%d)"
+          echo "=== Expected filename for today (UTC) ==="
+          echo "$TODAY_ID.json"
+          if [ -f "data/puzzle-cache/$TODAY_ID.json" ]; then
+            echo "OK: $TODAY_ID.json present"
+          else
+            echo "MISSING: data/puzzle-cache/$TODAY_ID.json"
+          fi
+
+      - name: Configure AWS (for S3/R2 upload)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Upload to S3 / R2 (blob)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET || secrets.S3_BUCKET }}
+          S3_PREFIX: ${{ vars.S3_PREFIX || 'puzzle-cache' }}
+        run: |
+          TODAY_ID="daily-$(date -u +%Y-%m-%d)"
+          S3_DEST="s3://$S3_BUCKET/$S3_PREFIX/$TODAY_ID.json"
+          echo "=== Upload destination ==="
+          echo "$S3_DEST"
+          if [ -f "data/puzzle-cache/$TODAY_ID.json" ]; then
+            aws s3 cp "data/puzzle-cache/$TODAY_ID.json" "$S3_DEST"
+            echo "=== Verify: list after upload ==="
+            aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" | grep -E "$TODAY_ID|$TODAY_ID.json" || aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/"
+            echo "Uploaded $TODAY_ID.json to $S3_DEST"
+          else
+            echo "No file data/puzzle-cache/$TODAY_ID.json"
+            exit 1
+          fi
+
+      - name: Commit and push cache (when not using S3)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID == '' }}
+        run: |
+          TODAY_ID="daily-$(date -u +%Y-%m-%d)"
+          echo "=== Branch (Vercel should deploy this branch) ==="
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
+          if [ ! -f "data/puzzle-cache/$TODAY_ID.json" ]; then
+            echo "No file data/puzzle-cache/$TODAY_ID.json"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "data/puzzle-cache/$TODAY_ID.json"
+          echo "=== git status before commit ==="
+          git status
+          if git diff --staged --quiet; then
+            echo "No changes to commit (file already committed)"
+          else
+            git commit -m "chore: daily puzzle cache $TODAY_ID [skip ci]"
+            echo "=== Commit SHA ==="
+            git rev-parse HEAD
+            git push origin HEAD
+            echo "Pushed commit to origin"
+          fi
