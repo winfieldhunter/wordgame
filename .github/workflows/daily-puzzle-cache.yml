@@ -53,14 +53,15 @@ jobs:
             echo "MISSING: data/puzzle-cache/$TODAY_ID.json"
           fi
 
-      # R2: set repo variable UPLOAD_TO_R2=true when secrets are configured (secrets can't be used in if:)
+      # R2: set repo variable UPLOAD_TO_R2=true when secrets are configured (secrets can't be used in if:).
+      # Use a real AWS region here so configure-aws-credentials can reach STS; upload uses --endpoint-url to R2.
       - name: Configure AWS (for R2 / S3 upload)
         if: ${{ vars.UPLOAD_TO_R2 == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION || 'auto' }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Upload to Cloudflare R2 (S3 API)
         if: ${{ vars.UPLOAD_TO_R2 == 'true' }}
