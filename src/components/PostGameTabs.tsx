@@ -118,7 +118,7 @@ export function PostGameTabs({
         <details
           className="card"
           style={{ padding: "var(--space-3) var(--space-4)" }}
-          open={!isWin}
+          open={true}
         >
           <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "var(--text-base)", listStyle: "none" }}>
             Your guesses

@@ -159,7 +159,7 @@ export function ScoringUI({ guesses, maxGuesses, isWin, isLoss, scoringMode }: S
   return (
     <section style={{ marginBottom: isWin ? "var(--space-4)" : "var(--space-6)" }}>
       {isWin ? (
-        <details style={{ marginBottom: "var(--space-2)" }} open={false}>
+        <details style={{ marginBottom: "var(--space-2)" }} open={true}>
           <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "var(--text-base)", listStyle: "none", marginBottom: "var(--space-2)" }}>
             Your guesses
           </summary>
@@ -192,7 +192,7 @@ export function ScoringUI({ guesses, maxGuesses, isWin, isLoss, scoringMode }: S
           </p>
         </div>
       )}
-      {isLoss && (
+      {isLoss && !isWin && (
         <p style={{ marginTop: "var(--space-4)", fontSize: "var(--text-base)", color: "var(--error)" }}>
           Out of guesses. Better luck next time.
         </p>
