@@ -1,5 +1,5 @@
 # Daily puzzle cache: precompute today's percentile cache and either upload to R2/S3 or commit+push.
-# Runs at 00:05 UTC. Set OPENAI_API_KEY. For R2: secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL; vars S3_BUCKET, S3_PREFIX, AWS_REGION.
+# Runs at 00:05 UTC. Set OPENAI_API_KEY. For R2: set variable UPLOAD_TO_R2=true and secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL; vars S3_BUCKET, S3_PREFIX, AWS_REGION.
 name: Daily puzzle cache
 
 on:
@@ -53,9 +53,9 @@ jobs:
             echo "MISSING: data/puzzle-cache/$TODAY_ID.json"
           fi
 
-      # R2 configured = all three secrets non-empty; otherwise we commit+push
+      # R2: set repo variable UPLOAD_TO_R2=true when secrets are configured (secrets can't be used in if:)
       - name: Configure AWS (for R2 / S3 upload)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' && secrets.AWS_ENDPOINT_URL != '' }}
+        if: ${{ vars.UPLOAD_TO_R2 == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -63,7 +63,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION || 'auto' }}
 
       - name: Upload to Cloudflare R2 (S3 API)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' && secrets.AWS_ENDPOINT_URL != '' }}
+        if: ${{ vars.UPLOAD_TO_R2 == 'true' }}
         env:
           S3_BUCKET: ${{ vars.S3_BUCKET || 'nearword-cache' }}
           S3_PREFIX: ${{ vars.S3_PREFIX || 'puzzle-cache' }}
@@ -88,7 +88,7 @@ jobs:
           fi
 
       - name: Commit and push cache (when R2 not configured)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID == '' || secrets.AWS_SECRET_ACCESS_KEY == '' || secrets.AWS_ENDPOINT_URL == '' }}
+        if: ${{ vars.UPLOAD_TO_R2 != 'true' }}
         run: |
           TODAY_ID="daily-$(date -u +%Y-%m-%d)"
           echo "=== Branch (Vercel should deploy this branch) ==="
