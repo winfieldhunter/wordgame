@@ -12,6 +12,7 @@ interface GameScreenProps {
   disabled: boolean;
   revealedTarget: string | null;
   isLoss: boolean;
+  onHintsUsed?: (count: number) => void;
 }
 
 export function GameScreen({
@@ -24,6 +25,7 @@ export function GameScreen({
   disabled,
   revealedTarget,
   isLoss,
+  onHintsUsed,
 }: GameScreenProps) {
   const remaining = maxGuesses != null ? maxGuesses - guessCount : null;
   const [input, setInput] = useState("");
@@ -62,6 +64,10 @@ export function GameScreen({
     }
     prevVisibleRef.current = visibleHintsCount;
   }, [visibleHintsCount]);
+
+  useEffect(() => {
+    if (gameEnded && onHintsUsed) onHintsUsed(visibleHintsCount);
+  }, [gameEnded, visibleHintsCount, onHintsUsed]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

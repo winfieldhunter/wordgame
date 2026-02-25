@@ -31,6 +31,18 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    const sessionIds = [...new Set((rows ?? []).map((r) => r.session_id as string))];
+    const displayNames = new Map<string, string>();
+    if (sessionIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("session_profiles")
+        .select("session_id, display_name")
+        .in("session_id", sessionIds);
+      for (const p of profiles ?? []) {
+        if (p.display_name) displayNames.set(p.session_id as string, p.display_name as string);
+      }
+    }
+
     const entries: { sessionId: string; isWin: boolean; guessCount: number; bestPercentile: number | null }[] =
       (rows ?? []).map((r) => {
         const best = r.best as { percentile?: number } | null;
@@ -61,13 +73,17 @@ export async function GET(request: NextRequest) {
 
     const top = entries.slice(0, 20).map((e, i) => {
       const rank = i + 1;
+      const name = displayNames.get(e.sessionId);
+      const label = e.sessionId === sessionId
+        ? (name || "You")
+        : (name || `Player ${rank}`);
       return {
         rank,
-        label: e.sessionId === sessionId ? "You" : `Player ${rank}`,
+        label,
         isYou: e.sessionId === sessionId,
-      isWin: e.isWin,
-      guessCount: e.guessCount,
-      bestPercentile: e.bestPercentile,
+        isWin: e.isWin,
+        guessCount: e.guessCount,
+        bestPercentile: e.bestPercentile,
       };
     });
 

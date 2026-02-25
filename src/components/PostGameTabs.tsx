@@ -21,6 +21,9 @@ interface PostGameTabsProps {
   guesses: GuessRow[];
   isWin: boolean;
   maxGuesses: number | null;
+  hintsUsed: number | null;
+  bestGuess: GuessRow | null;
+  revealedTarget: string | null;
   onComplete: () => void;
 }
 
@@ -32,28 +35,46 @@ export function PostGameTabs({
   guesses,
   isWin,
   maxGuesses,
+  hintsUsed,
+  bestGuess,
+  revealedTarget,
   onComplete,
 }: PostGameTabsProps) {
   const [tab, setTab] = useState<TabId>(isWin ? "map" : "path");
   const [shareText, setShareText] = useState<string | null>(null);
-  const [completed, setCompleted] = useState(false);
+  const [completionSent, setCompletionSent] = useState(false);
+  const [displayNameInput, setDisplayNameInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!completed) {
-      fetch("/api/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, puzzleId }),
+  const handleSaveOrSkip = (skip: boolean) => {
+    setSending(true);
+    setSendError(null);
+    const displayName = skip ? undefined : displayNameInput.trim() || undefined;
+    fetch("/api/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        puzzleId,
+        displayName,
+        hintsUsed: hintsUsed != null && hintsUsed >= 1 && hintsUsed <= 3 ? hintsUsed : undefined,
+      }),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("Could not save.");
+        return r.json();
       })
-        .then((r) => r.json())
-        .then((data) => {
-          setShareText(data.shareText ?? null);
-          setCompleted(true);
-          onComplete();
-        })
-        .catch(() => setCompleted(true));
-    }
-  }, [sessionId, puzzleId, completed, onComplete]);
+      .then((data) => {
+        setShareText(data.shareText ?? null);
+        setCompletionSent(true);
+        onComplete();
+      })
+      .catch((e) => setSendError(e instanceof Error ? e.message : "Could not save."))
+      .finally(() => setSending(false));
+  };
+
+  const completed = completionSent;
 
   const fallbackShare =
     shareText ??
@@ -68,6 +89,74 @@ export function PostGameTabs({
     { id: "friends", label: "Friends" },
     { id: "community", label: "Community" },
   ];
+
+  if (!completionSent) {
+    return (
+      <section style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--border-light)" }}>
+        <h2 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-2)", color: "var(--text)" }}>Finish</h2>
+        <div className="card" style={{ padding: "var(--space-4)", marginBottom: "var(--space-3)" }} role="status" aria-live="polite">
+          <p style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-base)", color: "var(--text)" }}>
+            {isWin ? "You got it!" : "Run finished."}
+          </p>
+          <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+            Guesses used: {guesses.length}
+            {maxGuesses != null && ` / ${maxGuesses}`}
+            {hintsUsed != null && hintsUsed >= 1 && ` · Hints used: ${hintsUsed}`}
+          </p>
+          {!isWin && bestGuess && (
+            <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+              Closest: <strong>{bestGuess.normalizedGuess}</strong>
+              {bestGuess.percentile != null && ` (${bestGuess.percentile.toFixed(1)}%)`}
+            </p>
+          )}
+          {revealedTarget && !isWin && (
+            <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+              The word was: <strong>{revealedTarget}</strong>
+            </p>
+          )}
+        </div>
+        <p id="postgame-name-label" style={{ marginBottom: "var(--space-2)", fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+          Enter your name (optional) to appear on leaderboards:
+        </p>
+        <input
+          type="text"
+          value={displayNameInput}
+          onChange={(e) => setDisplayNameInput(e.target.value)}
+          placeholder="Your name"
+          disabled={sending}
+          maxLength={100}
+          style={{ width: "100%", maxWidth: 280, padding: "var(--space-3) var(--space-4)", marginBottom: "var(--space-3)", fontSize: "var(--text-base)" }}
+          aria-labelledby="postgame-name-label"
+          aria-label="Your display name"
+        />
+        {sendError && (
+          <p role="alert" style={{ marginBottom: "var(--space-2)", fontSize: "var(--text-sm)", color: "var(--error)" }}>
+            {sendError}
+          </p>
+        )}
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => handleSaveOrSkip(false)}
+            disabled={sending}
+            style={{ padding: "var(--space-3) var(--space-5)" }}
+          >
+            {sending ? "Saving…" : "Save"}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => handleSaveOrSkip(true)}
+            disabled={sending}
+            style={{ padding: "var(--space-3) var(--space-5)" }}
+          >
+            Skip
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--border-light)" }}>

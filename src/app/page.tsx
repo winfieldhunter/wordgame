@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { GameScreen } from "@/components/GameScreen";
 import { ScoringUI } from "@/components/ScoringUI";
 import { ScoringHelp } from "@/components/ScoringHelp";
@@ -37,6 +38,8 @@ export default function Home() {
   const [level, setLevel] = useState<"easy" | "medium" | "hard">("easy");
   const [completedLevels, setCompletedLevels] = useState<("easy" | "medium" | "hard")[]>([]);
   const [todayPuzzleIds, setTodayPuzzleIds] = useState<{ easy: string; medium: string; hard: string } | null>(null);
+  const [hintsUsedForRun, setHintsUsedForRun] = useState<number | null>(null);
+  const [todayScore, setTodayScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
@@ -91,6 +94,19 @@ export default function Home() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId || !todayPuzzleIds || !runEnded || completedLevels.length !== 3) return;
+    const todayKey = todayPuzzleIds.easy.match(/^daily-(\d{4}-\d{2}-\d{2})-/)?.[1] ?? null;
+    if (!todayKey) return;
+    fetch(`/api/history?sessionId=${encodeURIComponent(sessionId)}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        const day = (d?.days ?? []).find((day: { date: string }) => day.date === todayKey);
+        if (day != null) setTodayScore(day.dailyScore);
+      })
+      .catch(() => {});
+  }, [sessionId, todayPuzzleIds, runEnded, completedLevels.length]);
 
   const fetchToday = () => {
     if (!sessionId) return;
@@ -177,6 +193,7 @@ export default function Home() {
     setIsLoss(false);
     setHints([]);
     setLetterHelp(null);
+    setHintsUsedForRun(null);
     fetch(`/api/puzzle/${next.id}?sessionId=${sessionId}`)
       .then((r) => r.json())
       .then((data) => {
@@ -255,7 +272,7 @@ export default function Home() {
     <main className="main-container">
       <OfflineBanner />
       <AddToHomeScreenBanner />
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
         <h1 className="app-logo" style={{ margin: 0 }}>
           <span style={{ color: "var(--accent)" }}>Near</span>
           <span style={{ color: "var(--text)" }}>Word</span>
@@ -272,6 +289,9 @@ export default function Home() {
             {" "}{level}
           </span>
         </h1>
+        <Link href="/history" className="btn-secondary" style={{ padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-sm)", textDecoration: "none" }}>
+          History
+        </Link>
       </div>
       {level === "easy" && (
         <p style={{ color: "var(--text-subtle)", fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>
@@ -294,6 +314,7 @@ export default function Home() {
         maxGuesses={maxGuesses}
         guessCount={guesses.length}
         gameEnded={gameEnded}
+        onHintsUsed={setHintsUsedForRun}
         onSubmit={async (guess) => {
           const res = await fetch("/api/guess", {
             method: "POST",
@@ -332,6 +353,11 @@ export default function Home() {
 
       {gameEnded && todayPuzzleIds && level !== "hard" && (
         <div style={{ marginBottom: "var(--space-4)" }}>
+          {level === "easy" && (
+            <p style={{ color: "var(--text-subtle)", fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>
+              Your daily score is easy + medium + hard. Continue to Medium to add to today&apos;s score.
+            </p>
+          )}
           <button
             type="button"
             className="btn-primary"
@@ -343,6 +369,11 @@ export default function Home() {
         </div>
       )}
 
+      {gameEnded && todayScore != null && (
+        <p style={{ marginBottom: "var(--space-3)", fontSize: "var(--text-base)", fontWeight: 600, color: "var(--accent)" }}>
+          Today&apos;s score: {todayScore}
+        </p>
+      )}
       {gameEnded && (
         <PostGameTabs
           sessionId={sessionId}
@@ -350,6 +381,9 @@ export default function Home() {
           guesses={guesses}
           isWin={isWin === true}
           maxGuesses={maxGuesses}
+          hintsUsed={hintsUsedForRun}
+          bestGuess={guesses.length > 0 ? (guesses.reduce((a, b) => ((b.percentile ?? 0) > (a.percentile ?? 0) ? b : a), guesses[0]) ?? null) : null}
+          revealedTarget={revealedTarget}
           onComplete={() => fetchPuzzleAgain()}
         />
       )}

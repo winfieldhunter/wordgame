@@ -4,6 +4,7 @@ import { runStore, aggregateStore } from "@/server/stores";
 import { runAggregation } from "@/server/aggregation";
 import { formatShareText } from "@/lib/shareText";
 import { getEmbeddingsProvider } from "@/server/embeddings/getProvider";
+import { hasSupabase, getSupabase } from "@/server/stores/supabaseClient";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -11,7 +12,7 @@ const UUID_REGEX =
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, puzzleId } = body ?? {};
+    const { sessionId, puzzleId, displayName, hintsUsed } = body ?? {};
 
     if (!sessionId || !UUID_REGEX.test(sessionId)) {
       return NextResponse.json(
@@ -42,6 +43,27 @@ export async function POST(request: NextRequest) {
         run.isWin === true
       );
       run = (await runStore.getRun(puzzleId, sessionId))!;
+    }
+
+    if (hasSupabase()) {
+      const supabase = getSupabase();
+      if (typeof hintsUsed === "number" && hintsUsed >= 1 && hintsUsed <= 3) {
+        await supabase
+          .from("runs")
+          .update({ hints_used: hintsUsed })
+          .eq("puzzle_id", puzzleId)
+          .eq("session_id", sessionId);
+      }
+      if (typeof displayName === "string" && displayName.trim().length > 0) {
+        await supabase.from("session_profiles").upsert(
+          {
+            session_id: sessionId,
+            display_name: displayName.trim().slice(0, 100),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "session_id" }
+        );
+      }
     }
 
     await runAggregation(puzzleId, sessionId);
