@@ -309,6 +309,7 @@ export default function Home() {
       </p>
 
       <GameScreen
+        key={puzzleId}
         hints={hints}
         letterHelp={letterHelp}
         maxGuesses={maxGuesses}

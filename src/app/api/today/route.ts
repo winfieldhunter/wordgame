@@ -46,23 +46,13 @@ export async function GET(request: NextRequest) {
     hints[2] = `Starts with "${firstLetter}", ${wordLength} letter${wordLength === 1 ? "" : "s"}.`;
   }
   let letterHelp: { firstLetter: string; wordLength: number } | undefined;
-
-  if (sessionId) {
-    const run = await runStore.getRun(currentPuzzleId, sessionId);
-    const guessCount = run?.guesses.length ?? 0;
-    if (
-      config.letterHelp.revealAfterGuesses != null &&
-      guessCount >= config.letterHelp.revealAfterGuesses
-    ) {
-      const trimmed = puzzle.target.trim();
-      const words = trimmed.split(/\s+/);
-      if (words.length === 1 && trimmed.length > 0) {
-        letterHelp = {
-          firstLetter: trimmed[0].toLowerCase(),
-          wordLength: trimmed.length,
-        };
-      }
-    }
+  const trimmedTarget = puzzle.target.trim();
+  const targetWords = trimmedTarget.split(/\s+/);
+  if (targetWords.length === 1 && trimmedTarget.length > 0) {
+    letterHelp = {
+      firstLetter: trimmedTarget[0].toLowerCase(),
+      wordLength: trimmedTarget.length,
+    };
   }
 
   const targetWordLength = puzzle.target.trim().split(/\s+/)[0]?.length ?? 0;

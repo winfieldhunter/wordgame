@@ -27,23 +27,13 @@ export async function GET(
     hints[2] = `Starts with "${firstLetter}", ${wordLength} letter${wordLength === 1 ? "" : "s"}.`;
   }
   let letterHelp: { firstLetter: string; wordLength: number } | undefined;
-
-  if (sessionId) {
-    const run = await runStore.getRun(puzzleId, sessionId);
-    const guessCount = run?.guesses.length ?? 0;
-    if (
-      config.letterHelp.revealAfterGuesses != null &&
-      guessCount >= config.letterHelp.revealAfterGuesses
-    ) {
-      const trimmed = puzzle.target.trim();
-      const words = trimmed.split(/\s+/);
-      if (words.length === 1 && trimmed.length > 0) {
-        letterHelp = {
-          firstLetter: trimmed[0].toLowerCase(),
-          wordLength: trimmed.length,
-        };
-      }
-    }
+  const trimmed = puzzle.target.trim();
+  const words = trimmed.split(/\s+/);
+  if (words.length === 1 && trimmed.length > 0) {
+    letterHelp = {
+      firstLetter: trimmed[0].toLowerCase(),
+      wordLength: trimmed.length,
+    };
   }
 
   const targetWordLength = puzzle.target.trim().split(/\s+/)[0]?.length ?? 0;
