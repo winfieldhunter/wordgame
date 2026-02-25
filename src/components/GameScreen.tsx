@@ -210,7 +210,7 @@ export function GameScreen({
             )}
           </div>
         )}
-        {letterHelp && (
+        {letterHelp && visibleHintsCount < 3 && (
           <>
             <p style={{ margin: "var(--space-3) 0 var(--space-1)", fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>
               Letter help
