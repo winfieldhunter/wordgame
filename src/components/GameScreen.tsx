@@ -210,16 +210,6 @@ export function GameScreen({
             )}
           </div>
         )}
-        {letterHelp && visibleHintsCount < 3 && (
-          <>
-            <p style={{ margin: "var(--space-3) 0 var(--space-1)", fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>
-              Letter help
-            </p>
-            <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--text-subtle)" }}>
-              Starts with <strong>{letterHelp.firstLetter}</strong> · {letterHelp.wordLength} letters
-            </p>
-          </>
-        )}
       </div>
 
       {letterHelp && !gameEnded && visibleHintsCount >= 3 && (
