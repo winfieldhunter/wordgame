@@ -222,7 +222,7 @@ export function GameScreen({
         )}
       </div>
 
-      {letterHelp && !gameEnded && (
+      {letterHelp && !gameEnded && visibleHintsCount >= 3 && (
         <div
           className="card"
           style={{
