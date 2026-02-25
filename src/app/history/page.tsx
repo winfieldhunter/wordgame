@@ -154,7 +154,7 @@ export default function HistoryPage() {
                       <div style={{ fontWeight: 600, color: "var(--text-muted)", textTransform: "capitalize", marginBottom: "var(--space-2)" }}>{lev.level}</div>
                       {lev.target && <p style={{ margin: "0 0 var(--space-1)", fontSize: "var(--text-sm)" }}>Target: <strong>{lev.target}</strong></p>}
                       {lev.hints.length > 0 && <p style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>Hints: {lev.hints.join(" • ")}</p>}
-                      {lev.guessCount > 0 || lev.isWin || lev.isLoss ? (
+                      {lev.guessCount > 0 || lev.isWin ? (
                         <p style={{ margin: 0, fontSize: "var(--text-sm)" }}>
                           {lev.isWin ? "Won" : "Loss"} — {lev.guessCount} guesses
                           {lev.hintsUsed != null && `, ${lev.hintsUsed} hints`}
