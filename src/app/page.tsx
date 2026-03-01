@@ -38,6 +38,8 @@ export default function Home() {
   const [level, setLevel] = useState<"easy" | "medium" | "hard">("easy");
   const [completedLevels, setCompletedLevels] = useState<("easy" | "medium" | "hard")[]>([]);
   const [todayPuzzleIds, setTodayPuzzleIds] = useState<{ easy: string; medium: string; hard: string } | null>(null);
+  const [theme, setTheme] = useState<string>("");
+  const [formattedDate, setFormattedDate] = useState<string>("");
   const [hintsUsedForRun, setHintsUsedForRun] = useState<number | null>(null);
   const [todayScore, setTodayScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,8 @@ export default function Home() {
         setLevel(data.level ?? "easy");
         setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
         if (data.todayPuzzleIds && typeof data.todayPuzzleIds === "object") setTodayPuzzleIds(data.todayPuzzleIds);
+        if (typeof data.theme === "string") setTheme(data.theme);
+        if (typeof data.formattedDate === "string") setFormattedDate(data.formattedDate);
         if (data.runEnded) {
           setRunEnded(true);
           if (data.isWin !== undefined) setIsWin(data.isWin);
@@ -123,6 +127,8 @@ export default function Home() {
         setLevel(data.level ?? "easy");
         setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
         if (data.todayPuzzleIds && typeof data.todayPuzzleIds === "object") setTodayPuzzleIds(data.todayPuzzleIds);
+        if (typeof data.theme === "string") setTheme(data.theme);
+        if (typeof data.formattedDate === "string") setFormattedDate(data.formattedDate);
         if (data.runEnded) {
           setRunEnded(true);
           if (data.isWin !== undefined) setIsWin(data.isWin);
@@ -200,6 +206,8 @@ export default function Home() {
         setHints(data.hints ?? []);
         setLetterHelp(data.letterHelp ?? null);
         setMaxGuesses(data.config?.maxGuesses ?? 8);
+        if (typeof data.theme === "string") setTheme(data.theme);
+        if (typeof data.formattedDate === "string") setFormattedDate(data.formattedDate);
       })
       .catch(() => {});
   };
@@ -245,6 +253,9 @@ export default function Home() {
                   setPercentileUnavailable(!!data.percentileUnavailable);
                   setLevel(data.level ?? "easy");
                   setCompletedLevels(Array.isArray(data.completedLevels) ? data.completedLevels : []);
+                  if (data.todayPuzzleIds && typeof data.todayPuzzleIds === "object") setTodayPuzzleIds(data.todayPuzzleIds);
+                  if (typeof data.theme === "string") setTheme(data.theme);
+                  if (typeof data.formattedDate === "string") setFormattedDate(data.formattedDate);
                   if (data.runEnded) {
                     setRunEnded(true);
                     if (data.isWin !== undefined) setIsWin(data.isWin);
@@ -272,23 +283,30 @@ export default function Home() {
     <main className="main-container">
       <OfflineBanner />
       <AddToHomeScreenBanner />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
-        <h1 className="app-logo" style={{ margin: 0 }}>
-          <span style={{ color: "var(--accent)" }}>Near</span>
-          <span style={{ color: "var(--text)" }}>Word</span>
-          <span
-            style={{
-              fontSize: "var(--text-xs)",
-              fontWeight: 600,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginLeft: "var(--space-2)",
-            }}
-          >
-            {" "}{level}
-          </span>
-        </h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+        <div>
+          <h1 className="app-logo" style={{ margin: 0 }}>
+            <span style={{ color: "var(--accent)" }}>Near</span>
+            <span style={{ color: "var(--text)" }}>Word</span>
+            <span
+              style={{
+                fontSize: "var(--text-xs)",
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                marginLeft: "var(--space-2)",
+              }}
+            >
+              {" "}{level}
+            </span>
+          </h1>
+          {(formattedDate || theme) && (
+            <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>
+              {formattedDate}{theme ? ` · ${theme}` : ""}
+            </p>
+          )}
+        </div>
         <Link href="/history" className="btn-secondary" style={{ padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-sm)", textDecoration: "none" }}>
           History
         </Link>

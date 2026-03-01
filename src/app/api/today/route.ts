@@ -3,6 +3,7 @@ import { getPuzzleById, getTodayPuzzleIds } from "@/server/puzzles/catalog";
 import { runStore } from "@/server/stores";
 import { defaultGameConfig, getPublicConfig } from "@/config/gameConfig";
 import type { PuzzleLevel } from "@/server/puzzles/puzzleId";
+import { getThemeForDateKey, getFormattedDateForDisplay } from "@/server/puzzles/puzzleId";
 
 const LEVEL_ORDER: PuzzleLevel[] = ["easy", "medium", "hard"];
 
@@ -57,6 +58,11 @@ export async function GET(request: NextRequest) {
 
   const targetWordLength = puzzle.target.trim().split(/\s+/)[0]?.length ?? 0;
 
+  const dateMatch = currentPuzzleId.match(/^daily-(\d{4}-\d{2}-\d{2})-/);
+  const dateKey = dateMatch?.[1] ?? "";
+  const theme = dateKey ? getThemeForDateKey(dateKey) : "";
+  const formattedDate = dateKey ? getFormattedDateForDisplay(dateKey) : "";
+
   const response: Record<string, unknown> = {
     puzzleId: currentPuzzleId,
     todayPuzzleIds,
@@ -69,6 +75,8 @@ export async function GET(request: NextRequest) {
     mode: puzzle.mode,
     targetWordLength,
     difficulty: puzzle.difficulty ?? "normal",
+    theme,
+    formattedDate,
   };
   if (letterHelp) response.letterHelp = letterHelp;
 

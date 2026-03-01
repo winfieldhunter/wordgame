@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPuzzleById } from "@/server/puzzles/catalog";
 import { runStore } from "@/server/stores";
 import { defaultGameConfig, getPublicConfig } from "@/config/gameConfig";
+import { getThemeForDateKey, getFormattedDateForDisplay } from "@/server/puzzles/puzzleId";
 
 export async function GET(
   request: NextRequest,
@@ -38,6 +39,11 @@ export async function GET(
 
   const targetWordLength = puzzle.target.trim().split(/\s+/)[0]?.length ?? 0;
 
+  const dateMatch = puzzleId.match(/^daily-(\d{4}-\d{2}-\d{2})-/);
+  const dateKey = dateMatch?.[1] ?? "";
+  const theme = dateKey ? getThemeForDateKey(dateKey) : "";
+  const formattedDate = dateKey ? getFormattedDateForDisplay(dateKey) : "";
+
   const response: Record<string, unknown> = {
     hints,
     config: getPublicConfig(config),
@@ -46,6 +52,8 @@ export async function GET(
     targetWordLength,
     difficulty: puzzle.difficulty ?? "normal",
     level: puzzle.level,
+    theme,
+    formattedDate,
   };
   if (letterHelp) response.letterHelp = letterHelp;
 

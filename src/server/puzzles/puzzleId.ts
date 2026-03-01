@@ -88,3 +88,41 @@ export function getTodayPuzzleIds(): { easy: string; medium: string; hard: strin
 export function getTodayPuzzleId(): string {
   return getTodayPuzzleIds().easy;
 }
+
+/** Day-of-week themes: Sun=Time, Mon=Emotions, Tue=Nature, Wed=Places, Thu=Actions, Fri=People, Sat=Senses */
+const DAY_OF_WEEK_THEMES: Record<number, string> = {
+  0: "Time",
+  1: "Emotions",
+  2: "Nature",
+  3: "Places",
+  4: "Actions",
+  5: "People",
+  6: "Senses",
+};
+
+/**
+ * Get theme for a puzzle date (YYYY-MM-DD). Uses day of week in PUZZLE_TIMEZONE.
+ */
+export function getThemeForDateKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const formatter = new Intl.DateTimeFormat("en-US", { timeZone: PUZZLE_TIMEZONE, weekday: "short" });
+  const dayName = formatter.format(date);
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const dow = dayMap[dayName] ?? 0;
+  return DAY_OF_WEEK_THEMES[dow] ?? "General";
+}
+
+/**
+ * Format date key for display (e.g. "Feb 28, 2026").
+ */
+export function getFormattedDateForDisplay(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: PUZZLE_TIMEZONE,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
