@@ -328,7 +328,7 @@ export default function Home() {
         {maxGuesses != null
           ? `You get ${maxGuesses} guesses. `
           : ""}
-        3 hints total.
+        3 hints total — Hint 2 unlocks after {progressiveHints.revealSecondHintAfterGuesses} guesses, Hint 3 after {progressiveHints.revealThirdHintAfterGuesses}.
       </p>
 
       <GameScreen

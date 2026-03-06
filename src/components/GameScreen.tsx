@@ -161,6 +161,9 @@ export function GameScreen({
           borderLeft: "4px solid var(--accent)",
         }}
       >
+        <p style={{ margin: "0 0 var(--space-3)", fontSize: "var(--text-xs)", color: "var(--text-subtle)" }}>
+          Hints unlock as you guess — 2nd after {revealSecondHintAfterGuesses}, 3rd after {revealThirdHintAfterGuesses}.
+        </p>
         <div className={newHintIndex === 0 ? "hint-block hint-block--new" : "hint-block"}>
           <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-subtle)", marginBottom: "var(--space-1)" }}>
             Hint 1 of 3
@@ -180,7 +183,7 @@ export function GameScreen({
               <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--text-muted)", lineHeight: 1.5 }}>
                 {hints[1]}
               </p>
-            ) : (
+            ) : guessCount >= revealSecondHintAfterGuesses ? (
               <button
                 type="button"
                 onClick={() => setRevealedByClick(2)}
@@ -189,6 +192,10 @@ export function GameScreen({
               >
                 Reveal hint 2
               </button>
+            ) : (
+              <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>
+                Unlocks after {revealSecondHintAfterGuesses} guesses
+              </p>
             )}
           </div>
         )}
@@ -202,7 +209,7 @@ export function GameScreen({
               <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--text-muted)", lineHeight: 1.5 }}>
                 {hints[2]}
               </p>
-            ) : (
+            ) : guessCount >= revealThirdHintAfterGuesses ? (
               <button
                 type="button"
                 onClick={() => setRevealedByClick(3)}
@@ -211,6 +218,10 @@ export function GameScreen({
               >
                 Reveal hint 3
               </button>
+            ) : (
+              <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)", color: "var(--text-subtle)" }}>
+                Unlocks after {revealThirdHintAfterGuesses} guesses
+              </p>
             )}
           </div>
         )}
