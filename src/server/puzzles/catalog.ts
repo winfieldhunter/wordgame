@@ -13,12 +13,31 @@ export interface PuzzleDef {
   level?: PuzzleLevel;
 }
 
+/** Template week (Sun–Sat) for fallback when exact date not in catalog. */
+const TEMPLATE_WEEK_START = "2026-02-22"; // Sunday
+
+/**
+ * Get day of week (0=Sun .. 6=Sat) for a date in UTC.
+ */
+function getDayOfWeek(date: Date): number {
+  return date.getUTCDay();
+}
+
 /**
  * Get puzzle for a calendar date and level. Uses UTC date for determinism.
+ * Falls back to same-weekday template when date is outside the catalog (e.g. 2025 or far future).
  */
 export function getPuzzleForDate(date: Date, level: PuzzleLevel): PuzzleDef | null {
   const key = formatDateKey(date);
-  const found = dailyPuzzles.find((p) => p.date === key && p.level === level);
+  let found = dailyPuzzles.find((p) => p.date === key && p.level === level);
+  if (!found) {
+    const dow = getDayOfWeek(date);
+    const [ty, tm, td] = TEMPLATE_WEEK_START.split("-").map(Number);
+    const base = new Date(Date.UTC(ty, tm - 1, td));
+    base.setUTCDate(base.getUTCDate() + dow);
+    const templateKey = formatDateKey(base);
+    found = dailyPuzzles.find((p) => p.date === templateKey && p.level === level);
+  }
   if (!found) return null;
   return {
     puzzleId: getPuzzleIdForDate(date, level),
