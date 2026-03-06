@@ -82,11 +82,7 @@ export async function GET(request: NextRequest) {
 
   if (sessionId) {
     const run = await runStore.getRun(currentPuzzleId, sessionId);
-    if (run?.endedAt != null) {
-      response.runEnded = true;
-      response.revealedTarget = puzzle.target;
-      response.isWin = run.isWin === true;
-      response.isLoss = run.isWin === false;
+    if (run) {
       response.guesses = run.guesses.map((g) => ({
         normalizedGuess: g.normalizedGuess,
         cosine: g.cosine,
@@ -94,6 +90,14 @@ export async function GET(request: NextRequest) {
         band: g.band,
         guessIndex: g.guessIndex,
       }));
+      if (run.endedAt != null) {
+        response.runEnded = true;
+        response.revealedTarget = puzzle.target;
+        response.isWin = run.isWin === true;
+        response.isLoss = run.isWin === false;
+      } else {
+        response.runEnded = false;
+      }
     }
   }
 

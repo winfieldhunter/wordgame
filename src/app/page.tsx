@@ -90,13 +90,12 @@ export default function Home() {
           setRunEnded(true);
           if (data.isWin !== undefined) setIsWin(data.isWin);
           if (data.isLoss !== undefined) setIsLoss(data.isLoss);
-          if (Array.isArray(data.guesses) && data.guesses.length > 0) setGuesses(data.guesses);
         } else {
           setRunEnded(false);
-          setGuesses([]);
           setIsWin(null);
           setIsLoss(false);
         }
+        if (Array.isArray(data.guesses)) setGuesses(data.guesses);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -137,13 +136,12 @@ export default function Home() {
           setRunEnded(true);
           if (data.isWin !== undefined) setIsWin(data.isWin);
           if (data.isLoss !== undefined) setIsLoss(data.isLoss);
-          if (Array.isArray(data.guesses) && data.guesses.length > 0) setGuesses(data.guesses);
         } else {
           setRunEnded(false);
-          setGuesses([]);
           setIsWin(null);
           setIsLoss(false);
         }
+        if (Array.isArray(data.guesses)) setGuesses(data.guesses);
       })
       .catch(() => {});
   };
@@ -265,13 +263,12 @@ export default function Home() {
                     setRunEnded(true);
                     if (data.isWin !== undefined) setIsWin(data.isWin);
                     if (data.isLoss !== undefined) setIsLoss(data.isLoss);
-                    if (Array.isArray(data.guesses) && data.guesses.length > 0) setGuesses(data.guesses);
                   } else {
                     setRunEnded(false);
-                    setGuesses([]);
                     setIsWin(null);
                     setIsLoss(false);
                   }
+                  if (Array.isArray(data.guesses)) setGuesses(data.guesses);
                 })
                 .catch((e) => setError(e.message))
                 .finally(() => setLoading(false));
