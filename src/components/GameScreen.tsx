@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import type { ProgressiveHintsConfig } from "@/config/gameConfig";
 
 interface GameScreenProps {
   hints: string[];
   letterHelp: { firstLetter: string; wordLength: number } | null;
   maxGuesses: number | null;
+  progressiveHints?: ProgressiveHintsConfig;
   guessCount: number;
   gameEnded: boolean;
   onSubmit: (guess: string) => Promise<unknown>;
@@ -19,6 +21,7 @@ export function GameScreen({
   hints,
   letterHelp,
   maxGuesses,
+  progressiveHints = { revealSecondHintAfterGuesses: 3, revealThirdHintAfterGuesses: 5 },
   guessCount,
   gameEnded,
   onSubmit,
@@ -38,7 +41,8 @@ export function GameScreen({
   const scratchInputRef = useRef<HTMLInputElement>(null);
   const prevVisibleRef = useRef(1);
 
-  const autoReveal = guessCount >= 6 ? 3 : guessCount >= 3 ? 2 : 1;
+  const { revealSecondHintAfterGuesses, revealThirdHintAfterGuesses } = progressiveHints;
+  const autoReveal = guessCount >= revealThirdHintAfterGuesses ? 3 : guessCount >= revealSecondHintAfterGuesses ? 2 : 1;
   const visibleHintsCount = Math.min(hints.length, Math.max(1, revealedByClick, autoReveal));
 
   useEffect(() => {

@@ -31,6 +31,7 @@ export interface MapConfig {
 
 export interface ProgressiveHintsConfig {
   revealSecondHintAfterGuesses: number;
+  revealThirdHintAfterGuesses: number;
 }
 
 export interface LetterHelpConfig {
@@ -78,6 +79,7 @@ export const defaultGameConfig: GameConfig = {
   ],
   progressiveHints: {
     revealSecondHintAfterGuesses: 3,
+    revealThirdHintAfterGuesses: 5,
   },
   letterHelp: {
     revealAfterGuesses: 4,

@@ -9,6 +9,7 @@ import { PostGameTabs } from "@/components/PostGameTabs";
 import { AddToHomeScreenBanner } from "@/components/AddToHomeScreenBanner";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { getFriendlyErrorMessage } from "@/lib/apiErrorMessages";
+import { defaultGameConfig } from "@/config/gameConfig";
 
 const SESSION_KEY = "nearword_session_id";
 
@@ -41,6 +42,7 @@ export default function Home() {
   const [theme, setTheme] = useState<string>("");
   const [formattedDate, setFormattedDate] = useState<string>("");
   const [hintsUsedForRun, setHintsUsedForRun] = useState<number | null>(null);
+  const [progressiveHints, setProgressiveHints] = useState(defaultGameConfig.progressiveHints);
   const [todayScore, setTodayScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export default function Home() {
         setHints(data.hints ?? []);
         setLetterHelp(data.letterHelp ?? null);
         setMaxGuesses(data.config?.maxGuesses ?? 8);
+        if (data.config?.progressiveHints) setProgressiveHints(data.config.progressiveHints);
         setRevealedTarget(data.revealedTarget ?? null);
         setPercentileUnavailable(!!data.percentileUnavailable);
         setDifficulty(data.difficulty === "hard" ? "hard" : "normal");
@@ -121,6 +124,7 @@ export default function Home() {
         setHints(data.hints ?? []);
         setLetterHelp(data.letterHelp ?? null);
         setMaxGuesses(data.config?.maxGuesses ?? 8);
+        if (data.config?.progressiveHints) setProgressiveHints(data.config.progressiveHints);
         setRevealedTarget(data.revealedTarget ?? null);
         setPercentileUnavailable(!!data.percentileUnavailable);
         setDifficulty(data.difficulty === "hard" ? "hard" : "normal");
@@ -249,6 +253,7 @@ export default function Home() {
                   setHints(data.hints ?? []);
                   setLetterHelp(data.letterHelp ?? null);
                   setMaxGuesses(data.config?.maxGuesses ?? 8);
+                  if (data.config?.progressiveHints) setProgressiveHints(data.config.progressiveHints);
                   setRevealedTarget(data.revealedTarget ?? null);
                   setPercentileUnavailable(!!data.percentileUnavailable);
                   setLevel(data.level ?? "easy");
@@ -331,6 +336,7 @@ export default function Home() {
         hints={hints}
         letterHelp={letterHelp}
         maxGuesses={maxGuesses}
+        progressiveHints={progressiveHints}
         guessCount={guesses.length}
         gameEnded={gameEnded}
         onHintsUsed={setHintsUsedForRun}
